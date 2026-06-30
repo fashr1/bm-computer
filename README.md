@@ -7,8 +7,9 @@
 ร้านค้าออนไลน์จำหน่ายอุปกรณ์คอมพิวเตอร์ครบวงจร (แนว JIB · Advice · iHaveCPU)
 สร้างด้วย **React + Vite + Tailwind CSS** · ฐานข้อมูล/ล็อกอินจริงด้วย **Supabase** · deploy ฟรีบน **Cloudflare Pages**
 
-🌐 **เว็บไซต์ (Live):** _<ใส่ URL หลังต่อ Cloudflare Pages — เช่น https://bm-computer.pages.dev>_
+🌐 **เว็บไซต์ (Live):** https://bm-computer.pages.dev
 📦 **โค้ด:** https://github.com/manatsawintho-ragoon/bm-computer
+🗄️ **ฐานข้อมูล:** Supabase (สินค้า 24 ชิ้น · RLS เปิดทุกตาราง)
 
 > เดิมเริ่มจาก Wireframe (CSI204 Workshop #1) ปัจจุบันพัฒนาเป็น **เว็บใช้งานจริง** เต็มระบบ
 
@@ -18,12 +19,12 @@
 
 | เฟส | งาน | สถานะ |
 |----|-----|------|
-| **0** | โครงเว็บ + ขึ้น GitHub + Deploy Cloudflare Pages (ออนไลน์มีลิงก์) | 🟡 กำลังต่อ Cloudflare |
-| 1 | **Supabase**: schema + seed สินค้าหลายชิ้น + Auth จริง + RLS security | ⏳ |
-| 2 | **Storefront แนว iHaveCPU**: carousel/Flash Sale/แบรนด์ + แกลเลอรีซูม(lightbox) + PromptPay QR | ⏳ |
+| **0** | โครงเว็บ + ขึ้น GitHub + Deploy Cloudflare Pages (ออนไลน์มีลิงก์) | ✅ ออนไลน์ |
+| **1** | **Supabase**: schema + seed 24 สินค้า + Auth จริง + RLS + ต่อ frontend ดึงข้อมูลจริง | ✅ เสร็จ |
+| 2 | **Storefront แนว iHaveCPU**: carousel/Flash Sale/แบรนด์ (PromptPay + แกลเลอรีซูม ✅ แล้ว) | 🟡 ทำต่อ |
 | 3 | **Admin CMS**: CRUD + จัดการสไลด์/ภาพ(ลิงก์)/เนื้อหา + CRM + dynamic title & SEO | ⏳ |
 
-✅ เสร็จแล้ว: Dark/Light mode · 2 ภาษา (ไทย/อังกฤษ) · โลโก้+favicon แบรนด์จริง · Auth popup modal · BrowserRouter+SEO-ready · ขึ้น GitHub
+✅ เสร็จแล้ว: ออนไลน์จริง · ต่อ Supabase (สินค้า/หมวด/แบรนด์จากดาต้าเบส) · Dark/Light · 2 ภาษา · Auth popup modal + strength meter · แกลเลอรีซูม lightbox · PromptPay QR · โลโก้+favicon แบรนด์
 
 ---
 
