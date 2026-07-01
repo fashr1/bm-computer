@@ -127,4 +127,162 @@ graph TD
 - ความปลอดภัยบังคับที่ชั้นฐานข้อมูล (RLS): ลูกค้าเห็นเฉพาะข้อมูลตนเอง, แก้ catalog ได้เฉพาะ Admin
 
 ---
+
+## 8. Use Case Diagram
+
+```mermaid
+flowchart LR
+    Guest[ผู้เยี่ยมชม / Guest]
+    Customer[ลูกค้า / Customer]
+    Admin[ผู้ดูแลระบบ / Admin]
+
+    subgraph System[ระบบ BM Computer]
+        UC1[ดูสินค้าทั้งหมด]
+        UC2[ค้นหาและกรองสินค้า]
+        UC3[ดูรายละเอียดสินค้า]
+        UC4[เข้าสู่ระบบ / สมัครสมาชิก]
+        UC5[จัดการตะกร้าสินค้า]
+        UC6[ชำระเงินและสร้างคำสั่งซื้อ]
+        UC7[ติดตามและดูประวัติคำสั่งซื้อ]
+        UC8[ใช้ PC Builder]
+        UC9[จัดการสินค้าและหมวดหมู่]
+        UC10[จัดการออเดอร์และสไลด์]
+    end
+
+    Guest --> UC1
+    Guest --> UC2
+    Guest --> UC3
+
+    Customer --> UC4
+    Customer --> UC5
+    Customer --> UC6
+    Customer --> UC7
+    Customer --> UC8
+
+    Admin --> UC9
+    Admin --> UC10
+
+    UC4 --> System
+    UC5 --> System
+    UC6 --> System
+    UC7 --> System
+    UC8 --> System
+    UC9 --> System
+    UC10 --> System
+```
+
+**ความหมายของแผนภาพ**
+- ผู้เยี่ยมชมสามารถดูสินค้าและค้นหาได้ก่อนล็อกอิน
+- ลูกค้าต้องเข้าสู่ระบบก่อนใช้ฟีเจอร์ตะกร้า ออเดอร์ และการติดตามสถานะ
+- แอดมินมีสิทธิ์จัดการข้อมูลสินค้า ออเดอร์ สไลด์ และการตั้งค่าเว็บไซต์ผ่านแดชบอร์ด
+
+---
+
+## 9. Class Diagram
+
+```mermaid
+classDiagram
+    class User {
+        +id
+        +email
+        +role
+        +signIn()
+        +signOut()
+    }
+
+    class Profile {
+        +fullName
+        +phone
+        +address
+        +role
+    }
+
+    class Product {
+        +id
+        +slug
+        +name
+        +price
+        +salePrice
+        +stock
+        +images
+        +specs
+        +getDisplayPrice()
+    }
+
+    class Category {
+        +id
+        +slug
+        +name
+    }
+
+    class Brand {
+        +id
+        +slug
+        +name
+    }
+
+    class CartItem {
+        +slug
+        +name
+        +qty
+        +price
+    }
+
+    class Order {
+        +id
+        +code
+        +status
+        +total
+        +paymentMethod
+        +create()
+        +updateStatus()
+    }
+
+    class OrderItem {
+        +productId
+        +qty
+        +price
+    }
+
+    class AuthContext {
+        +user
+        +profile
+        +isAdmin
+        +signOut()
+    }
+
+    class CartContext {
+        +items
+        +add()
+        +setQty()
+        +remove()
+        +clear()
+    }
+
+    class ApiService {
+        +fetchProducts()
+        +fetchProductBySlug()
+        +createOrder()
+        +adminListProducts()
+        +saveSlide()
+    }
+
+    User "1" --> "0..*" Order : places
+    User "1" --> "1" Profile : has
+    Category "1" --> "0..*" Product : groups
+    Brand "1" --> "0..*" Product : brands
+    Product "1" --> "0..*" CartItem : added to
+    Order "1" --> "1..*" OrderItem : contains
+    AuthContext --> User
+    CartContext --> CartItem
+    ApiService --> Product
+    ApiService --> Order
+```
+
+**ภาพรวมของแบบจำลองคำสั่งและข้อมูล**
+- `AuthContext` และ `CartContext` เป็นตัวจัดการสถานะหลักของหน้าเว็บ
+- `ApiService` ทำหน้าที่เชื่อม React frontend กับ Supabase backend
+- `Product`, `Order`, และ `OrderItem` เป็นโครงสร้างข้อมูลหลักสำหรับร้านค้าออนไลน์
+
+---
 <p align="center"><sub>© 2026 BM Computer (บ้านมีคอม) · CSI204</sub></p>
