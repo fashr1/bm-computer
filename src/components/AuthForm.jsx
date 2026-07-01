@@ -24,6 +24,7 @@ export default function AuthForm({ view, setView, onClose }) {
   const [ok, setOk] = useState('')
   const [captcha, setCaptcha] = useState('')
   const [resetKey, setResetKey] = useState(0)
+  const [gLoading, setGLoading] = useState(false)
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }))
 
   const pw = checkPw(f.password)
@@ -68,7 +69,18 @@ export default function AuthForm({ view, setView, onClose }) {
 
   async function google() {
     if (!isSupabaseConfigured) { setError('ยังไม่ได้เชื่อม Supabase'); return }
-    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
+    setError(''); setGLoading(true)
+    // เก็บ path ปัจจุบันไว้ กลับมาหน้าเดิมหลังล็อกอินสำเร็จ
+    const back = window.location.pathname + window.location.search
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + back,
+        queryParams: { prompt: 'select_account' }, // ให้เลือกบัญชี Google ได้ทุกครั้ง
+      },
+    })
+    // ถ้าสำเร็จ เบราว์เซอร์จะ redirect ออกไปเอง โค้ดข้างล่างรันเฉพาะตอน error
+    if (error) { setError(error.message || 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ'); setGLoading(false) }
   }
 
   return (
@@ -78,8 +90,9 @@ export default function AuthForm({ view, setView, onClose }) {
         <p className="mt-1 text-sm text-muted">{isLogin ? t('auth.loginSub') : t('auth.registerSub')}</p>
       </div>
 
-      <button onClick={google} className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-line bg-surface py-3 font-semibold transition-colors hover:bg-surface2 cursor-pointer">
-        <IconGoogle /> {isLogin ? t('auth.googleLogin') : t('auth.googleRegister')}
+      <button onClick={google} disabled={gLoading} className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-line bg-surface py-3 font-semibold transition-colors hover:bg-surface2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer">
+        {gLoading ? <Icon name="loader" size={18} className="animate-spin" /> : <IconGoogle />}
+        {gLoading ? t('common.loading') : isLogin ? t('auth.googleLogin') : t('auth.googleRegister')}
       </button>
       <div className="my-5 flex items-center gap-3 text-xs text-muted before:h-px before:flex-1 before:bg-line after:h-px after:flex-1 after:bg-line">
         {isLogin ? t('auth.orEmail') : t('auth.orEmailReg')}
