@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { categories } from '../data/mock'
 import { Icon } from './Icons'
 import { cx } from '../lib/ui'
 import BrandLogo from './BrandLogo'
@@ -9,6 +8,7 @@ import { useLang } from '../i18n/LanguageContext'
 import { useAuthModal } from './AuthModal'
 import { useAuth } from '../auth/AuthContext'
 import { useCart } from '../cart/CartContext'
+import { useCatalog } from '../catalog/CatalogContext'
 import { apiEnabled } from '../lib/apiClient'
 
 function ActionBtn({ children, ...rest }) {
@@ -24,6 +24,7 @@ export default function Navbar() {
   const { lang, toggle: toggleLang, t } = useLang()
   const { open: openAuth } = useAuthModal()
   const { user, profile, isAdmin, signOut } = useAuth()
+  const { categories, loading: catsLoading, catName } = useCatalog()
   const { count } = useCart()
   const [open, setOpen] = useState(false)
   const [menu, setMenu] = useState(false)
@@ -110,9 +111,11 @@ export default function Navbar() {
       <nav className={cx('border-t border-white/10', open ? 'block' : 'hidden md:block')} aria-label="categories">
         <div className="mx-auto flex max-w-[1200px] flex-col gap-1 overflow-x-auto px-2 md:flex-row md:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <CatLink to="/products" label={t('nav.all')} accent onClick={() => setOpen(false)} />
-          {categories.map((c) => (
-            <CatLink key={c.slug} to={`/products?cat=${c.slug}`} icon={c.icon} label={t(`cats.${c.slug}`)} onClick={() => setOpen(false)} />
-          ))}
+          {catsLoading
+            ? Array.from({ length: 8 }).map((_, i) => <span key={i} className="skeleton mx-3 my-3 h-4 w-16 shrink-0 bg-white/10" aria-hidden="true" />)
+            : categories.map((c) => (
+                <CatLink key={c.slug} to={`/products?cat=${c.slug}`} icon={c.icon || 'box'} label={catName(c.slug)} onClick={() => setOpen(false)} />
+              ))}
           <CatLink to="/builder" icon="cpu" label={t('nav.builder')} onClick={() => setOpen(false)} />
         </div>
       </nav>

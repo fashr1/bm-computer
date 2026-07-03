@@ -1,5 +1,4 @@
 import { useSearchParams, Link } from 'react-router-dom'
-import { categories } from '../data/mock'
 import ProductCard from '../components/ProductCard'
 import { Icon } from '../components/Icons'
 import { cx } from '../lib/ui'
@@ -7,7 +6,9 @@ import { useLang } from '../i18n/LanguageContext'
 import { fetchProducts, fetchBrands } from '../lib/api'
 import { useFetch } from '../lib/useFetch'
 import { fuzzyFilter } from '../lib/search'
-import { ProductCardSkeleton } from '../components/Skeleton'
+import { ProductCardSkeleton, Skeleton } from '../components/Skeleton'
+import { useCatalog } from '../catalog/CatalogContext'
+import { usePageMeta } from '../lib/usePageMeta'
 
 const wrap = 'mx-auto max-w-[1200px] px-4'
 
@@ -20,7 +21,7 @@ export default function ProductList() {
 
   const { data, loading } = useFetch(() => fetchProducts({ cat, brand }), [cat, brand])
   const { data: brands } = useFetch(() => fetchBrands(), [])
-  const catName = (slug) => t(`cats.${slug}`)
+  const { categories, loading: catsLoading, catName } = useCatalog()
   const list = q ? fuzzyFilter(data || [], q, catName) : (data || [])
 
   const buildUrl = (updates) => {
@@ -31,6 +32,7 @@ export default function ProductList() {
   }
 
   const title = q ? `${t('list.searchFor')} "${q}"` : cat ? catName(cat) : brand ? brand : t('list.title')
+  usePageMeta(title !== t('list.title') ? title : t('list.title'))
 
   return (
     <div className={`${wrap} py-6`}>
@@ -47,13 +49,15 @@ export default function ProductList() {
           <div className="border-b border-line py-4">
             <h4 className="mb-3 text-sm font-semibold">{t('list.category')}</h4>
             <div className="flex flex-col gap-1">
-              {categories.map((c) => (
-                <Link key={c.slug} to={buildUrl({ cat: c.slug === cat ? null : c.slug })}
-                  className={cx('flex items-center gap-2 rounded-md px-1 py-1 text-sm transition-colors hover:text-brand-600',
-                    c.slug === cat ? 'font-bold text-brand-600' : 'text-fg')}>
-                  <Icon name={c.icon} size={16} /> {catName(c.slug)}
-                </Link>
-              ))}
+              {catsLoading
+                ? Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="my-1 h-4 w-3/4" />)
+                : categories.map((c) => (
+                    <Link key={c.slug} to={buildUrl({ cat: c.slug === cat ? null : c.slug })}
+                      className={cx('flex items-center gap-2 rounded-md px-1 py-1 text-sm transition-colors hover:text-brand-600',
+                        c.slug === cat ? 'font-bold text-brand-600' : 'text-fg')}>
+                      <Icon name={c.icon || 'box'} size={16} /> {catName(c.slug)}
+                    </Link>
+                  ))}
             </div>
           </div>
 

@@ -225,6 +225,82 @@ export async function fetchProductBySlug(slug) {
   return data ? mapProduct(data) : null
 }
 
+// ===================== REVIEWS (รีวิวจริงจากตาราง reviews) =====================
+export async function fetchReviews(slug) {
+  if (apiEnabled) return (await api.get(`/api/catalog/products/${encodeURIComponent(slug)}/reviews`)).items
+  if (!isSupabaseConfigured) return []
+  const { data: prod } = await supabase.from('products').select('id').eq('slug', slug).maybeSingle()
+  if (!prod) return []
+  const { data: sess } = await supabase.auth.getSession()
+  const uid = sess?.session?.user?.id || null
+  const { data, error } = await supabase.from('reviews')
+    .select('id,user_id,rating,comment,author_name,verified,created_at')
+    .eq('product_id', prod.id).order('created_at', { ascending: false })
+  if (error) throw error
+  return (data || []).map((r) => ({
+    id: r.id, rating: r.rating, comment: r.comment, author_name: r.author_name,
+    verified: !!r.verified, created_at: r.created_at, mine: !!uid && r.user_id === uid,
+  }))
+}
+
+export async function saveReview(slug, { rating, comment }) {
+  if (apiEnabled) { await api.post(`/api/catalog/products/${encodeURIComponent(slug)}/reviews`, { rating, comment }); return }
+  if (!isSupabaseConfigured) throw new Error('Supabase not configured')
+  const { data: sess } = await supabase.auth.getSession()
+  const user = sess?.session?.user
+  if (!user) throw new Error(tOutside('orders.loginToView'))
+  const { data: prod } = await supabase.from('products').select('id').eq('slug', slug).maybeSingle()
+  if (!prod) throw new Error(tOutside('notfound.title'))
+  const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle()
+  const author = prof?.full_name || (user.email ? user.email.split('@')[0] : null)
+  const { data: bought } = await supabase.from('orders')
+    .select('id, order_items!inner(product_id)')
+    .eq('order_items.product_id', prod.id)
+    .in('status', ['paid', 'packing', 'shipping', 'done']).limit(1)
+  const { error } = await supabase.from('reviews').upsert(
+    { product_id: prod.id, user_id: user.id, rating, comment: comment?.trim() || null, author_name: author, verified: !!(bought && bought.length) },
+    { onConflict: 'product_id,user_id' }
+  )
+  if (error) throw error
+}
+
+export async function deleteReview(slug) {
+  if (apiEnabled) { await api.del(`/api/catalog/products/${encodeURIComponent(slug)}/reviews`); return }
+  const { data: sess } = await supabase.auth.getSession()
+  const user = sess?.session?.user
+  if (!user) return
+  const { data: prod } = await supabase.from('products').select('id').eq('slug', slug).maybeSingle()
+  if (!prod) return
+  const { error } = await supabase.from('reviews').delete().eq('product_id', prod.id).eq('user_id', user.id)
+  if (error) throw error
+}
+
+// ===================== ADMIN: BRANDS / CATEGORIES =====================
+export async function saveBrand(b) {
+  const row = { id: b.id, slug: b.slug, name: b.name, logo_url: b.logo_url || null, sort: Number(b.sort) || 0 }
+  if (apiEnabled) { await api.post('/api/admin/brands', row); return }
+  const { id, ...rest } = row
+  const res = id ? await supabase.from('brands').update(rest).eq('id', id) : await supabase.from('brands').insert(rest)
+  if (res.error) throw res.error
+}
+export async function deleteBrand(id) {
+  if (apiEnabled) { await api.del(`/api/admin/brands/${id}`); return }
+  const { error } = await supabase.from('brands').delete().eq('id', id)
+  if (error) throw error
+}
+export async function saveCategory(g) {
+  const row = { id: g.id, slug: g.slug, name_th: g.name_th, name_en: g.name_en, icon: g.icon || null, sort: Number(g.sort) || 0 }
+  if (apiEnabled) { await api.post('/api/admin/categories', row); return }
+  const { id, ...rest } = row
+  const res = id ? await supabase.from('categories').update(rest).eq('id', id) : await supabase.from('categories').insert(rest)
+  if (res.error) throw res.error
+}
+export async function deleteCategory(id) {
+  if (apiEnabled) { await api.del(`/api/admin/categories/${id}`); return }
+  const { error } = await supabase.from('categories').delete().eq('id', id)
+  if (error) throw error
+}
+
 export async function fetchSlides(placement) {
   if (apiEnabled) return (await api.get('/api/catalog/slides' + qs({ placement }))).items
   if (!isSupabaseConfigured) return []

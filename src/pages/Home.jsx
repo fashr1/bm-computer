@@ -1,13 +1,15 @@
 import { Link } from 'react-router-dom'
-import { categories } from '../data/mock'
 import ProductRow from '../components/ProductRow'
 import { Icon } from '../components/Icons'
 import HeroCarousel from '../components/HeroCarousel'
 import BrandBar from '../components/BrandBar'
 import FlashSale from '../components/FlashSale'
 import { useLang } from '../i18n/LanguageContext'
+import { useCatalog } from '../catalog/CatalogContext'
 import { fetchProducts, fetchSlides } from '../lib/api'
 import { useFetch } from '../lib/useFetch'
+import { Skeleton } from '../components/Skeleton'
+import { usePageMeta } from '../lib/usePageMeta'
 
 const wrap = 'mx-auto max-w-[1200px] px-4'
 
@@ -27,8 +29,10 @@ function SectionHead({ title, to, icon }) {
 
 export default function Home() {
   const { t } = useLang()
+  const { categories, loading: catsLoading, catName } = useCatalog()
   const { data, loading } = useFetch(() => fetchProducts({}), [])
   const { data: heroSlides } = useFetch(() => fetchSlides('hero'), [])
+  usePageMeta(null, t('home.heroDesc'))
   const list = data || []
   const featured = list.filter((p) => p.featured)
   const newArrivals = [...list].reverse().slice(0, 12)
@@ -56,13 +60,15 @@ export default function Home() {
       <section className="mt-12">
         <SectionHead title={t('home.byCategory')} to="/products" />
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-8">
-          {categories.map((c) => (
-            <Link key={c.slug} to={`/products?cat=${c.slug}`}
-              className="card-hover flex flex-col items-center gap-2 rounded-xl border border-line bg-surface px-2 py-4 text-center hover:border-brand-500 hover:shadow-md">
-              <Icon name={c.icon} size={26} className="text-brand-600" />
-              <span className="text-xs font-semibold leading-tight">{t(`cats.${c.slug}`)}</span>
-            </Link>
-          ))}
+          {catsLoading
+            ? Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-[84px] rounded-xl" />)
+            : categories.map((c) => (
+                <Link key={c.slug} to={`/products?cat=${c.slug}`}
+                  className="card-hover flex flex-col items-center gap-2 rounded-xl border border-line bg-surface px-2 py-4 text-center hover:border-brand-500 hover:shadow-md">
+                  <Icon name={c.icon || 'box'} size={26} className="text-brand-600" />
+                  <span className="text-xs font-semibold leading-tight">{catName(c.slug)}</span>
+                </Link>
+              ))}
         </div>
       </section>
 

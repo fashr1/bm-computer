@@ -1,0 +1,7 @@
+# ค่าตั้ง Supabase CLI / GitHub integration (Preview branches)
+# migrations/ = ประวัติ schema (ชื่อไฟล์ต้องตรงกับ version ใน supabase_migrations.schema_migrations)
+project_id = "bm-computer"
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]

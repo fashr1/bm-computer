@@ -8,6 +8,7 @@ import { useAuthModal } from '../components/AuthModal'
 import { fetchMyOrders } from '../lib/api'
 import { useFetch } from '../lib/useFetch'
 import { OrderListSkeleton } from '../components/Skeleton'
+import { usePageMeta } from '../lib/usePageMeta'
 
 const wrap = 'mx-auto max-w-[1200px] px-4'
 
@@ -17,6 +18,7 @@ export default function OrderHistory() {
   const { open: openAuth } = useAuthModal()
   const { data, loading } = useFetch(() => (user ? fetchMyOrders(user.id) : Promise.resolve([])), [user?.id])
   const orders = data || []
+  usePageMeta(t('orders.title'))
   const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { dateStyle: 'medium' }) : ''
 
   return (

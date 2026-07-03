@@ -12,6 +12,9 @@ import { useCart } from '../cart/CartContext'
 import { useAuth } from '../auth/AuthContext'
 import { useAuthModal } from '../components/AuthModal'
 import { ProductDetailSkeleton } from '../components/Skeleton'
+import { useCatalog } from '../catalog/CatalogContext'
+import { usePageMeta } from '../lib/usePageMeta'
+import Reviews from '../components/Reviews'
 
 const wrap = 'mx-auto max-w-[1200px] px-4'
 const PLACEHOLDER = 'https://placehold.co/600x600/f1f1f4/9ca3af?text=BM+Computer'
@@ -19,8 +22,10 @@ const PLACEHOLDER = 'https://placehold.co/600x600/f1f1f4/9ca3af?text=BM+Computer
 export default function ProductDetail() {
   const { id } = useParams()
   const { lang, t } = useLang()
+  const { catName } = useCatalog()
   const { data: p, loading } = useFetch(() => fetchProductBySlug(id), [id])
   const { data: rel } = useFetch(() => (p ? fetchProducts({ cat: p.cat }) : Promise.resolve([])), [p?.cat])
+  usePageMeta(p?.name, p ? `${p.name} · ${catName(p.cat)} · ฿${fmt(p.price)} - BM Computer` : undefined)
 
   const [tab, setTab] = useState('spec')
   const [qty, setQty] = useState(1)
@@ -47,7 +52,7 @@ export default function ProductDetail() {
     <div className={`${wrap} py-6`}>
       <nav className="flex flex-wrap gap-1.5 py-3 text-sm text-muted">
         <Link to="/" className="hover:text-brand-600">{t('list.home')}</Link> /
-        <Link to={`/products?cat=${p.cat}`} className="hover:text-brand-600">{t(`cats.${p.cat}`)}</Link> /
+        <Link to={`/products?cat=${p.cat}`} className="hover:text-brand-600">{catName(p.cat)}</Link> /
         <span className="text-fg">{p.name}</span>
       </nav>
 
@@ -123,7 +128,7 @@ export default function ProductDetail() {
       {/* TABS */}
       <section className="mt-12">
         <div className="mb-5 flex gap-1 border-b border-line">
-          {[['spec', t('pdp.specs')], ['desc', t('pdp.desc')], ['review', `${t('pdp.reviewsTab')} (${p.reviews})`]].map(([k, label]) => (
+          {[['spec', t('pdp.specs')], ['desc', t('pdp.desc')], ['review', t('pdp.reviewsTab')]].map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)}
               className={cx('cursor-pointer border-b-2 px-4 py-3 font-semibold transition-colors',
                 tab === k ? 'border-brand-600 text-brand-600' : 'border-transparent text-muted hover:text-fg')}>{label}</button>
@@ -143,12 +148,7 @@ export default function ProductDetail() {
           </table>
         )}
         {tab === 'desc' && <p className="max-w-[70ch] text-muted">{p.name} - {t('pdp.descBody')}</p>}
-        {tab === 'review' && (
-          <div className="grid place-items-center gap-2 rounded-2xl border border-dashed border-line bg-surface py-14 text-center text-muted">
-            <span className="text-2xl text-amber-500">★ {p.rating}</span>
-            <span className="text-sm">{t('pdp.noReviews')}</span>
-          </div>
-        )}
+        {tab === 'review' && <Reviews slug={p.slug} fallbackRating={p.rating} />}
       </section>
 
       {related.length > 0 && (

@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
 import { useLang } from '../i18n/LanguageContext'
+import { usePageMeta } from '../lib/usePageMeta'
 
 export default function NotFound() {
   const { t } = useLang()
+  usePageMeta(t('notfound.title'))
   return (
     <div className="mx-auto flex max-w-[1200px] flex-col items-center gap-4 px-4 py-20 text-center">
       <div className="text-6xl font-extrabold text-brand-600">404</div>

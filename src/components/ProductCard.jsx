@@ -8,9 +8,11 @@ import { useCart } from '../cart/CartContext'
 import { useAuth } from '../auth/AuthContext'
 import { useWishlist } from '../wishlist/WishlistContext'
 import { useAuthModal } from './AuthModal'
+import { useCatalog } from '../catalog/CatalogContext'
 
 export default function ProductCard({ p }) {
   const { lang, t } = useLang()
+  const { catName } = useCatalog()
   const { add } = useCart()
   const { user } = useAuth()
   const wl = useWishlist()
@@ -48,7 +50,7 @@ export default function ProductCard({ p }) {
         )}
       </div>
       <div className="flex flex-1 flex-col gap-1.5 p-4">
-        <span className="text-xs text-muted">{t(`cats.${p.cat}`)} · {p.brand}</span>
+        <span className="text-xs text-muted">{catName(p.cat)} · {p.brand}</span>
         <Link to={`/product/${p.id}`} className="line-clamp-2 min-h-[2.6em] text-sm font-semibold leading-snug transition-colors group-hover/card:text-brand-600">{p.name}</Link>
         <span className="flex items-center gap-1 text-xs text-amber-500">★ {p.rating} <span className="text-muted">({p.reviews})</span></span>
         <div className="mt-auto flex items-baseline gap-2 pt-1">

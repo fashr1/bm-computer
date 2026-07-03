@@ -56,6 +56,9 @@ const paths = {
   line: 'M12 4C6.8 4 2.5 7.4 2.5 11.6c0 2.4 1.5 4.5 3.8 5.9-.2.7-.6 2-.7 2.4-.1.3.1.5.4.3.3-.1 2.9-1.9 3.8-2.6.7.1 1.4.2 2.2.2 5.2 0 9.5-3.4 9.5-7.6S17.2 4 12 4z',
 }
 
+// รายชื่อไอคอนทั้งหมด (ใช้ใน admin เลือกไอคอนหมวดหมู่)
+export const iconNames = Object.keys(paths)
+
 export function Icon({ name, size = 20, className = '', strokeWidth = 1.8, ...rest }) {
   const d = paths[name]
   if (!d) return null

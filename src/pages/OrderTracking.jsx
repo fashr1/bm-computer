@@ -8,6 +8,7 @@ import { useAuthModal } from '../components/AuthModal'
 import { fetchOrderByCode } from '../lib/api'
 import { useFetch } from '../lib/useFetch'
 import { Skeleton, TextLinesSkeleton } from '../components/Skeleton'
+import { usePageMeta } from '../lib/usePageMeta'
 
 const wrap = 'mx-auto max-w-[1200px] px-4'
 
@@ -18,6 +19,7 @@ export default function OrderTracking() {
   const [params] = useSearchParams()
   const code = params.get('order')
   const { data: order, loading } = useFetch(() => fetchOrderByCode(code), [code, user?.id])
+  usePageMeta(t('track.title'))
 
   const fmtDate = (iso) => iso ? new Date(iso).toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' }) : ''
 

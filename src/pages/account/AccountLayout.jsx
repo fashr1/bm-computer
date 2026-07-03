@@ -7,6 +7,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { useAuthModal } from '../../components/AuthModal'
 import { accountApi } from '../../lib/accountApi'
 import { apiEnabled } from '../../lib/apiClient'
+import { usePageMeta } from '../../lib/usePageMeta'
 
 function initials(name, email) {
   const src = (name || email || '?').trim()
@@ -38,6 +39,7 @@ function SideLink({ to, end, icon, label }) {
 export default function AccountLayout() {
   const { t } = useLang()
   const { user, profile, loading } = useAuth()
+  usePageMeta(t('account.title'))
   const { open: openAuth } = useAuthModal()
   const nav = useNavigate()
   const [summary, setSummary] = useState({ done: 0, shipping: 0, processing: 0, awaitingPayment: 0 })

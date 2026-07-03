@@ -1,8 +1,11 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import type { AppEnv } from '../lib/env'
-import { anonClient } from '../lib/supabase'
+import { anonClient, authedDb } from '../lib/supabase'
+import { requireAuth } from '../lib/middleware'
+import { getAccessToken } from '../lib/cookies'
+import { getUserFromToken } from '../lib/session'
 import { badRequest, notFound } from '../lib/http'
-import { jsonRes, errRes } from '../lib/openapi'
+import { OkSchema, jsonBody, jsonRes, errRes } from '../lib/openapi'
 
 const TAG = ['Catalog']
 
@@ -148,6 +151,105 @@ export function registerCatalog(app: OpenAPIHono<AppEnv>) {
         return true
       })
       return c.json({ ok: true as const, items })
+    }
+  )
+
+  // ---------- REVIEWS ----------
+  const ReviewSchema = z.object({
+    id: z.string(), rating: z.number(), comment: z.string().nullable(),
+    author_name: z.string().nullable(), verified: z.boolean(),
+    created_at: z.string(), mine: z.boolean(),
+  }).openapi('Review')
+
+  // หา product id จาก slug (anon - เฉพาะสินค้าที่ active)
+  async function productIdBySlug(env: AppEnv['Bindings'], slug: string): Promise<string> {
+    const { data, error } = await anonClient(env).from('products').select('id').eq('slug', slug).eq('is_active', true).maybeSingle()
+    if (error) throw badRequest(error.message)
+    if (!data) throw notFound('ไม่พบสินค้า')
+    return data.id
+  }
+
+  // GET /api/catalog/products/{slug}/reviews - อ่านสาธารณะ (ถ้ามี session จะติดธง mine ให้)
+  app.openapi(
+    createRoute({
+      method: 'get', path: '/api/catalog/products/{slug}/reviews', tags: TAG, summary: 'รีวิวของสินค้า',
+      request: { params: z.object({ slug: z.string() }) },
+      responses: { 200: jsonRes('สำเร็จ', z.object({ ok: z.literal(true), items: z.array(ReviewSchema) })), 404: errRes('ไม่พบสินค้า') },
+    }),
+    async (c) => {
+      const { slug } = c.req.valid('param')
+      const pid = await productIdBySlug(c.env, slug)
+      // ระบุตัวตนแบบ optional: มี cookie ก็เช็ค ไม่มีก็เป็น guest
+      let uid: string | null = null
+      const token = getAccessToken(c)
+      if (token) uid = (await getUserFromToken(c.env, token))?.id ?? null
+      const { data, error } = await anonClient(c.env)
+        .from('reviews')
+        .select('id,user_id,rating,comment,author_name,verified,created_at')
+        .eq('product_id', pid)
+        .order('created_at', { ascending: false })
+      if (error) throw badRequest(error.message)
+      const items = (data ?? []).map((r: any) => ({
+        id: r.id, rating: r.rating, comment: r.comment ?? null,
+        author_name: r.author_name ?? null, verified: !!r.verified,
+        created_at: r.created_at, mine: !!uid && r.user_id === uid,
+      }))
+      return c.json({ ok: true as const, items })
+    }
+  )
+
+  // POST /api/catalog/products/{slug}/reviews - เขียน/แก้รีวิวของตัวเอง (upsert)
+  app.openapi(
+    createRoute({
+      method: 'post', path: '/api/catalog/products/{slug}/reviews', tags: TAG, summary: 'เขียน/แก้รีวิว (ต้องเข้าสู่ระบบ)',
+      middleware: [requireAuth] as const,
+      request: {
+        params: z.object({ slug: z.string() }),
+        body: jsonBody(z.object({ rating: z.number().int().min(1).max(5), comment: z.string().max(2000).optional() })),
+      },
+      responses: { 200: jsonRes('บันทึกแล้ว', OkSchema), 401: errRes('ต้องเข้าสู่ระบบ'), 404: errRes('ไม่พบสินค้า') },
+    }),
+    async (c) => {
+      const { slug } = c.req.valid('param')
+      const { rating, comment } = c.req.valid('json')
+      const user = c.get('user')!
+      const pid = await productIdBySlug(c.env, slug)
+      const db = authedDb(c)
+      // ชื่อผู้รีวิวจาก profile ตัวเอง (RLS own-row) - fallback เป็นส่วนหน้าอีเมล
+      const { data: prof } = await db.from('profiles').select('full_name').eq('id', user.id).maybeSingle()
+      const author = prof?.full_name || (user.email ? user.email.split('@')[0] : null)
+      // verified = เคยสั่งซื้อสินค้านี้จริง (ออเดอร์ของตัวเองที่ชำระ/ส่งแล้ว - RLS จำกัดให้เห็นแค่ของตัวเอง)
+      const { data: bought } = await db
+        .from('orders')
+        .select('id, order_items!inner(product_id)')
+        .eq('order_items.product_id', pid)
+        .in('status', ['paid', 'packing', 'shipping', 'done'])
+        .limit(1)
+      const verified = !!(bought && bought.length)
+      const { error } = await db.from('reviews').upsert(
+        { product_id: pid, user_id: user.id, rating, comment: comment?.trim() || null, author_name: author, verified },
+        { onConflict: 'product_id,user_id' }
+      )
+      if (error) throw badRequest(error.message)
+      return c.json({ ok: true as const })
+    }
+  )
+
+  // DELETE /api/catalog/products/{slug}/reviews - ลบรีวิวของตัวเอง
+  app.openapi(
+    createRoute({
+      method: 'delete', path: '/api/catalog/products/{slug}/reviews', tags: TAG, summary: 'ลบรีวิวของตัวเอง',
+      middleware: [requireAuth] as const,
+      request: { params: z.object({ slug: z.string() }) },
+      responses: { 200: jsonRes('ลบแล้ว', OkSchema), 401: errRes('ต้องเข้าสู่ระบบ'), 404: errRes('ไม่พบสินค้า') },
+    }),
+    async (c) => {
+      const { slug } = c.req.valid('param')
+      const user = c.get('user')!
+      const pid = await productIdBySlug(c.env, slug)
+      const { error } = await authedDb(c).from('reviews').delete().eq('product_id', pid).eq('user_id', user.id)
+      if (error) throw badRequest(error.message)
+      return c.json({ ok: true as const })
     }
   )
 }

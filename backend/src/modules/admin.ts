@@ -25,6 +25,18 @@ const SlideBody = z.object({
   sort: z.number().optional(), is_active: z.boolean().optional(),
 }).openapi('AdminSlideBody')
 
+const BrandBody = z.object({
+  id: z.string().uuid().optional(),
+  slug: z.string().min(1), name: z.string().min(1),
+  logo_url: z.string().nullable().optional(), sort: z.number().optional(),
+}).openapi('AdminBrandBody')
+
+const CategoryBody = z.object({
+  id: z.string().uuid().optional(),
+  slug: z.string().min(1), name_th: z.string().min(1), name_en: z.string().min(1),
+  icon: z.string().nullable().optional(), sort: z.number().optional(),
+}).openapi('AdminCategoryBody')
+
 const okItems = jsonRes('สำเร็จ', z.object({ ok: z.literal(true), items: z.array(z.record(z.any())) }))
 
 export function registerAdmin(app: OpenAPIHono<AppEnv>) {
@@ -92,6 +104,52 @@ export function registerAdmin(app: OpenAPIHono<AppEnv>) {
       request: { params: IdParam }, responses: { 200: jsonRes('ลบแล้ว', OkSchema), 403: errRes('ต้องเป็นแอดมิน') } }),
     async (c) => {
       const { error } = await authedDb(c).from('slides').delete().eq('id', c.req.valid('param').id)
+      if (error) throw badRequest(error.message)
+      return c.json({ ok: true as const })
+    }
+  )
+
+  // ---------- BRANDS ----------
+  app.openapi(
+    createRoute({ method: 'post', path: '/api/admin/brands', tags: TAG, summary: 'เพิ่ม/แก้ไขแบรนด์', middleware: [requireAdmin] as const,
+      request: { body: jsonBody(BrandBody) }, responses: { 200: jsonRes('บันทึกแล้ว', OkSchema), 400: errRes('error'), 403: errRes('ต้องเป็นแอดมิน') } }),
+    async (c) => {
+      const b = c.req.valid('json')
+      const row = { slug: b.slug, name: b.name, logo_url: b.logo_url || null, sort: Number(b.sort) || 0 }
+      const db = authedDb(c)
+      const res = b.id ? await db.from('brands').update(row).eq('id', b.id) : await db.from('brands').insert(row)
+      if (res.error) throw badRequest(res.error.message)
+      return c.json({ ok: true as const })
+    }
+  )
+  app.openapi(
+    createRoute({ method: 'delete', path: '/api/admin/brands/{id}', tags: TAG, summary: 'ลบแบรนด์', middleware: [requireAdmin] as const,
+      request: { params: IdParam }, responses: { 200: jsonRes('ลบแล้ว', OkSchema), 400: errRes('error'), 403: errRes('ต้องเป็นแอดมิน') } }),
+    async (c) => {
+      const { error } = await authedDb(c).from('brands').delete().eq('id', c.req.valid('param').id)
+      if (error) throw badRequest(error.message)
+      return c.json({ ok: true as const })
+    }
+  )
+
+  // ---------- CATEGORIES ----------
+  app.openapi(
+    createRoute({ method: 'post', path: '/api/admin/categories', tags: TAG, summary: 'เพิ่ม/แก้ไขหมวดหมู่', middleware: [requireAdmin] as const,
+      request: { body: jsonBody(CategoryBody) }, responses: { 200: jsonRes('บันทึกแล้ว', OkSchema), 400: errRes('error'), 403: errRes('ต้องเป็นแอดมิน') } }),
+    async (c) => {
+      const g = c.req.valid('json')
+      const row = { slug: g.slug, name_th: g.name_th, name_en: g.name_en, icon: g.icon || null, sort: Number(g.sort) || 0 }
+      const db = authedDb(c)
+      const res = g.id ? await db.from('categories').update(row).eq('id', g.id) : await db.from('categories').insert(row)
+      if (res.error) throw badRequest(res.error.message)
+      return c.json({ ok: true as const })
+    }
+  )
+  app.openapi(
+    createRoute({ method: 'delete', path: '/api/admin/categories/{id}', tags: TAG, summary: 'ลบหมวดหมู่', middleware: [requireAdmin] as const,
+      request: { params: IdParam }, responses: { 200: jsonRes('ลบแล้ว', OkSchema), 400: errRes('error'), 403: errRes('ต้องเป็นแอดมิน') } }),
+    async (c) => {
+      const { error } = await authedDb(c).from('categories').delete().eq('id', c.req.valid('param').id)
       if (error) throw badRequest(error.message)
       return c.json({ ok: true as const })
     }

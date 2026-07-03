@@ -10,6 +10,7 @@ import { useAuthModal } from '../components/AuthModal'
 import { createOrder, fetchSetting } from '../lib/api'
 import { useFetch } from '../lib/useFetch'
 import { promptpayQrUrl } from '../lib/promptpay'
+import { usePageMeta } from '../lib/usePageMeta'
 
 const wrap = 'mx-auto max-w-[1200px] px-4'
 const input = 'w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20'
@@ -17,6 +18,7 @@ const input = 'w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-
 export default function Checkout() {
   const { t } = useLang()
   const { items, subtotal, shipping, total, clear } = useCart()
+  usePageMeta(t('cart.checkout'))
   const { user, profile } = useAuth()
   const { open: openAuth } = useAuthModal()
   const nav = useNavigate()

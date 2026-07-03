@@ -90,7 +90,7 @@ src/
 │                OrderHistory, PCBuilder, AdminDashboard, NotFound
 └── data/mock.js  (กำลังเลิกใช้ - ย้ายไป DB ให้หมด)
 
-supabase/        schema.sql, seed.sql, migrations/ (0001_account.sql), README.md
+supabase/        schema.sql, seed.sql, config.toml, migrations/ (<version>_<name>.sql), README.md
 
 backend/         *** Backend API แยก (Cloudflare Worker) ***
 ├── src/index.ts        entry: mount modules + CORS + Swagger UI (/api/docs)
@@ -149,8 +149,14 @@ npm run preview  # preview build
 - ✅ **Skeleton loading ทั้งเว็บ**: `components/Skeleton.jsx` (ProductCard/Row/Grid, ProductDetail, Order list, Table, Slide, Form, BrandBar) + utility `.skeleton` (shimmer) ใน index.css - ใช้แทน "กำลังโหลด..."/spinner ทุกหน้า (หน้าบ้าน+บัญชี+แอดมิน)
 - ✅ **i18n ครบทุกหน้า**: แอดมินทั้งหมด + AuthForm (placeholder/error) + Checkout errors + topbar + FlashSale/BrandBar/Footer ผ่าน t() หมดแล้ว · ข้อความ error ใน lib (apiClient/api) ใช้ `tOutside()` จาก translations.js (อ่านภาษาจาก localStorage)
 - ✅ **Google OAuth UX**: overlay "กำลังเข้าสู่ระบบด้วย Google" ตอนกลับจาก OAuth (flag `bm-oauth-return` ใน sessionStorage - เช็คจาก hash ตรงๆ ไม่ได้เพราะ supabase-js ลบก่อน React mount) แสดงขั้นต่ำ 900ms กันกระพริบ · spinner ทุกตัวใช้ class `.spinner` (1.4s หมุนนุ่มกว่า animate-spin)
-- ✅ ลบรีวิวปลอมใน ProductDetail -> empty state จริง ("ยังไม่มีรีวิว") รอระบบรีวิวจริง (ตาราง reviews มีแล้ว)
-- 🟡 **เฟสถัดไป:** เปิด Google provider ใน Supabase (Google Cloud OAuth client + redirect), ระบบรีวิวจริง (เขียน/อ่านจากตาราง reviews), (ตัวเลือก) ย้าย verify-slip มา worker เมื่อใส่ service_role, ตั้ง Supabase JWT expiry ≈900s, categories ใน nav จาก DB, brands/categories CRUD
+- ✅ **ระบบรีวิวจริง**: ตาราง reviews + unique(user,product) + RLS แก้/ลบของตัวเอง + trigger คำนวณ products.rating/reviews_count อัตโนมัติ (migration `20260703042228_reviews_system`) · worker endpoints GET/POST/DELETE `/api/catalog/products/{slug}/reviews` (POST เช็ค verified purchase จากออเดอร์จริง, เก็บ author_name บนแถว - ไม่เปิด profiles สาธารณะ) · UI แท็บรีวิวใน ProductDetail (`components/Reviews.jsx`): ลิสต์+ให้ดาว+เขียน/แก้/ลบของตัวเอง, badge "ซื้อแล้ว"/"รีวิวของฉัน" - ทดสอบ E2E ครบวงจรแล้ว (สร้าง user ทดสอบ -> รีวิว -> trigger อัปเดตคะแนน -> ลบ -> คืนค่า seed)
+- ✅ **หมวดหมู่ทั้งเว็บมาจาก DB**: `catalog/CatalogContext.jsx` โหลด categories ครั้งเดียว (name_th/name_en/icon) -> Navbar/Home/ProductList/ProductCard/Cart/ProductDetail ใช้ catName() - เพิ่มหมวดในหลังบ้านขึ้นเว็บทันที (เลิกใช้ categories ใน mock.js แล้ว)
+- ✅ **Admin CRUD หมวดหมู่+แบรนด์** (`pages/admin/AdminCatalog.jsx` แท็บ "หมวดหมู่/แบรนด์"): ตาราง+ฟอร์ม+เลือกไอคอน (iconNames จาก Icons.jsx) · worker endpoints POST/DELETE `/api/admin/{brands,categories}` (requireAdmin) · เตือนตอนลบว่าสินค้าในหมวด/แบรนด์จะหายจากหน้าร้าน (query ใช้ inner join)
+- ✅ **SEO**: `lib/usePageMeta.js` ตั้ง `<title>` + meta description ต่อหน้า ทุกหน้า (หน้าสินค้าใช้ชื่อ+หมวด+ราคา)
+- ✅ **Supabase Preview (GitHub integration) ใช้ได้แล้ว**: ไฟล์ migration ต้องชื่อ `<version>_<name>.sql` ตรงกับ `supabase_migrations.schema_migrations` ฝั่ง remote เป๊ะ - แก้โดย rename 0001 เป็น `20260701185434_account_section.sql`, เพิ่ม baseline `20260630000000_init_schema.sql` (= schema.sql) + insert version ลง history remote, เพิ่ม `supabase/config.toml` (seed = seed.sql)
+- 📌 **กฎ migration ใหม่**: apply ผ่าน Supabase MCP (`apply_migration`) แล้ว "ต้อง" สร้างไฟล์ local `supabase/migrations/<version>_<name>.sql` เนื้อหาเดียวกัน (ดู version จาก `list_migrations`) ไม่งั้น Supabase Preview บน GitHub จะพังอีก
+- ✅ **Google provider เปิดแล้วใน Supabase** (`/auth/v1/settings` -> google: true) - Google login ใช้ได้จริงทั้ง flow (client OAuth -> POST /api/auth/session -> HttpOnly cookie)
+- 🟡 **เฟสถัดไป:** ตั้ง Supabase JWT expiry ≈900s (Dashboard -> Authentication -> Sessions), (ตัวเลือก) ย้าย verify-slip มา worker เมื่อใส่ service_role, ผูก custom domain ให้ worker แก้ปัญหา third-party cookie, ระบบรีวิวเฉพาะผู้ซื้อ (ตอนนี้ล็อกอินก็รีวิวได้ แต่มี badge แยกผู้ซื้อจริง)
 - ⚠️ **คุกกี้ข้ามโดเมน** (pages.dev -> workers.dev) ใช้ SameSite=None+Secure - ทำงานบน Chrome แต่บางเบราว์เซอร์ที่บล็อก third-party cookie อาจมีปัญหา · ทางแก้ระยะยาว: ผูก worker เข้าโดเมนเดียวกับ frontend (custom domain/route) แล้วใช้ SameSite=Lax
 - 📌 **Supabase MCP**: ใช้รัน migration ได้เอง (apply_migration) - migration 0001 apply แล้ว
 

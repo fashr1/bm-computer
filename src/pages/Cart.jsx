@@ -3,13 +3,17 @@ import { fmt } from '../data/mock'
 import { Icon } from '../components/Icons'
 import { useLang } from '../i18n/LanguageContext'
 import { useCart } from '../cart/CartContext'
+import { useCatalog } from '../catalog/CatalogContext'
+import { usePageMeta } from '../lib/usePageMeta'
 
 const wrap = 'mx-auto max-w-[1200px] px-4'
 const PH = 'https://placehold.co/200x200/f1f1f4/9ca3af?text=BM'
 
 export default function Cart() {
   const { t } = useLang()
+  const { catName } = useCatalog()
   const { items, setQty, remove, subtotal, shipping, total } = useCart()
+  usePageMeta(t('cart.title'))
 
   if (items.length === 0) {
     return (
@@ -37,7 +41,7 @@ export default function Cart() {
               </Link>
               <div>
                 <Link to={`/product/${it.slug}`} className="font-semibold hover:text-brand-600">{it.name}</Link>
-                <div className="text-sm text-muted">{it.cat ? t(`cats.${it.cat}`) : ''} {it.brand ? `· ${it.brand}` : ''}</div>
+                <div className="text-sm text-muted">{it.cat ? catName(it.cat) : ''} {it.brand ? `· ${it.brand}` : ''}</div>
                 <div className="mt-2 flex items-center gap-4">
                   <div className="inline-flex items-center overflow-hidden rounded-lg border border-line">
                     <button onClick={() => setQty(it.slug, it.qty - 1)} className="grid h-9 w-9 place-items-center hover:bg-surface2 cursor-pointer" aria-label="-"><Icon name="minus" size={14} /></button>

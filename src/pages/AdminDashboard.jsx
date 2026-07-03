@@ -7,14 +7,17 @@ import { useAuthModal } from '../components/AuthModal'
 import { useLang } from '../i18n/LanguageContext'
 import AdminOverview from './admin/AdminOverview'
 import AdminProducts from './admin/AdminProducts'
+import AdminCatalog from './admin/AdminCatalog'
 import AdminSlides from './admin/AdminSlides'
 import AdminOrders from './admin/AdminOrders'
 import AdminSettings from './admin/AdminSettings'
+import { usePageMeta } from '../lib/usePageMeta'
 
 const wrap = 'mx-auto max-w-[1200px] px-4'
 const menu = [
   { k: 'overview', icon: 'grid', label: 'admin.menuOverview' },
   { k: 'products', icon: 'box', label: 'admin.menuProducts' },
+  { k: 'catalog', icon: 'grid', label: 'admin.menuCatalog' },
   { k: 'slides', icon: 'image', label: 'admin.menuSlides' },
   { k: 'orders', icon: 'receipt', label: 'admin.menuOrders' },
   { k: 'settings', icon: 'wrench', label: 'admin.menuSettings' },
@@ -25,6 +28,7 @@ export default function AdminDashboard() {
   const { user, isAdmin, loading } = useAuth()
   const { open: openAuth } = useAuthModal()
   const [tab, setTab] = useState('overview')
+  usePageMeta(t('admin.title'))
 
   if (loading) return (
     <div className={`${wrap} flex items-center justify-center gap-3 py-20 text-muted`}>
@@ -60,6 +64,7 @@ export default function AdminDashboard() {
         <section>
           {tab === 'overview' && <AdminOverview />}
           {tab === 'products' && <AdminProducts />}
+          {tab === 'catalog' && <AdminCatalog />}
           {tab === 'slides' && <AdminSlides />}
           {tab === 'orders' && <AdminOrders />}
           {tab === 'settings' && <AdminSettings />}

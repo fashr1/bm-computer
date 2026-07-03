@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { fmt } from '../data/mock'
 import { Icon } from '../components/Icons'
 import { useLang } from '../i18n/LanguageContext'
+import { usePageMeta } from '../lib/usePageMeta'
 
 const wrap = 'mx-auto max-w-[1200px] px-4'
 
@@ -19,6 +20,7 @@ const parts = [
 
 export default function PCBuilder() {
   const { t } = useLang()
+  usePageMeta(t('builder.title'), t('builder.desc'))
   const total = parts.reduce((s, p) => s + p.price, 0)
   const chosen = parts.filter((p) => p.picked).length
 

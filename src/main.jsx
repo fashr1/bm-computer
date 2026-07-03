@@ -5,6 +5,7 @@ import App from './App.jsx'
 import { ThemeProvider } from './theme/ThemeContext'
 import { LanguageProvider } from './i18n/LanguageContext'
 import { AuthProvider } from './auth/AuthContext'
+import { CatalogProvider } from './catalog/CatalogContext'
 import { WishlistProvider } from './wishlist/WishlistContext'
 import { CartProvider } from './cart/CartContext'
 import './index.css'
@@ -14,13 +15,15 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <ThemeProvider>
       <LanguageProvider>
         <AuthProvider>
-          <WishlistProvider>
-            <CartProvider>
-              <BrowserRouter>
-                <App />
-              </BrowserRouter>
-            </CartProvider>
-          </WishlistProvider>
+          <CatalogProvider>
+            <WishlistProvider>
+              <CartProvider>
+                <BrowserRouter>
+                  <App />
+                </BrowserRouter>
+              </CartProvider>
+            </WishlistProvider>
+          </CatalogProvider>
         </AuthProvider>
       </LanguageProvider>
     </ThemeProvider>
