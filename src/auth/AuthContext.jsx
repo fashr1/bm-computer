@@ -47,8 +47,11 @@ export function AuthProvider({ children }) {
     ;(async () => {
       const wasOauth = isOAuthReturn()
       const started = Date.now()
-      // ถ้ากลับมาจาก Google OAuth: supabase-js ฝั่ง client จะจับ session จาก URL
-      // -> โอนเข้า HttpOnly cookie ผ่าน backend แล้ว signOut client (เก็บ session ที่ cookie ที่เดียว)
+      // ถ้ากลับมาจาก Google OAuth: supabase-js ฝั่ง client จะจับ session จาก URL hash
+      // -> โอนเข้า HttpOnly cookie ผ่าน backend (session อยู่ที่ cookie ที่เดียว)
+      // client ตั้ง persistSession:false ไว้ (ดู lib/supabase.js) จึงไม่ต้อง signOut -
+      // ห้ามเรียก signOut เด็ดขาด เพราะทุก scope (รวม 'local') ยิง POST /logout
+      // ไป revoke session ปัจจุบันที่ Supabase = ฆ่า session ที่เพิ่งโอนเข้า cookie
       if (isSupabaseConfigured) {
         try {
           const { data } = await supabase.auth.getSession()
@@ -57,9 +60,6 @@ export function AuthProvider({ children }) {
               access_token: data.session.access_token,
               refresh_token: data.session.refresh_token,
             })
-            // ต้อง scope:'local' เท่านั้น - ค่า default (global) จะ revoke session ที่ Supabase
-            // ทำให้ session ที่เพิ่งโอนเข้า HttpOnly cookie ตายทันที (Google login ล้มเหลวทุกครั้ง)
-            await supabase.auth.signOut({ scope: 'local' })
             window.history.replaceState({}, '', window.location.pathname + window.location.search)
           }
         } catch { /* ถ้าโอนไม่สำเร็จ ค่อยให้ผู้ใช้ล็อกอินใหม่ */ }
