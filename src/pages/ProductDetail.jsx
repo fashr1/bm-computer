@@ -10,7 +10,7 @@ import { fetchProductBySlug, fetchProducts } from '../lib/api'
 import { useFetch } from '../lib/useFetch'
 import { useCart } from '../cart/CartContext'
 import { useAuth } from '../auth/AuthContext'
-import { useAuthModal } from '../components/AuthModal'
+import { useAuthNav } from '../auth/useAuthNav'
 import { ProductDetailSkeleton } from '../components/Skeleton'
 import { useCatalog } from '../catalog/CatalogContext'
 import { usePageMeta } from '../lib/usePageMeta'
@@ -35,7 +35,7 @@ export default function ProductDetail() {
   const [added, setAdded] = useState(false)
   const { add } = useCart()
   const { user } = useAuth()
-  const { open: openAuth } = useAuthModal()
+  const { open: openAuth } = useAuthNav()
   const nav = useNavigate()
   const addToCart = () => { if (!user) { openAuth('login'); return } add(p, qty); setAdded(true); setTimeout(() => setAdded(false), 1200) }
   const buyNow = () => { if (!user) { openAuth('login'); return } add(p, qty); nav('/checkout') }

@@ -26,7 +26,7 @@ app.onError(errorHandler)
 // ---- CORS (อนุญาต frontend origin + ส่งคุกกี้ข้ามโดเมนได้) ----
 app.use('/api/*', cors({
   origin: (origin, c) => {
-    const allowed = (c.env.FRONTEND_ORIGIN || '').split(',').map((s) => s.trim()).filter(Boolean)
+    const allowed = (c.env.FRONTEND_ORIGIN || '').split(',').map((s: string) => s.trim()).filter(Boolean)
     if (allowed.includes(origin)) return origin
     return allowed[0] ?? origin
   },

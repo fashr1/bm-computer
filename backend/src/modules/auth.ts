@@ -3,7 +3,8 @@ import type { AppEnv } from '../lib/env'
 import { anonClient, userClient } from '../lib/supabase'
 import { setSessionCookies, clearSessionCookies, getRefreshToken, getAccessToken } from '../lib/cookies'
 import { verifyTurnstile } from '../lib/turnstile'
-import { requireAuth } from '../lib/middleware'
+import { checkEmailDeliverable } from '../lib/email'
+import { getUserFromToken } from '../lib/session'
 import { HttpError, badRequest, unauthorized } from '../lib/http'
 import { ErrorSchema, OkSchema, jsonBody, jsonRes, errRes } from '../lib/openapi'
 
@@ -69,6 +70,9 @@ export function registerAuth(app: OpenAPIHono<AppEnv>) {
       const b = c.req.valid('json')
       const ip = c.req.header('cf-connecting-ip')
       if (!(await verifyTurnstile(c.env, b.captchaToken, ip))) throw badRequest('ยืนยันตัวตน (captcha) ไม่ผ่าน')
+      // กันอีเมล bounce: โดเมนพิมพ์ผิด/อีเมลชั่วคราว/โดเมนไม่รับเมล -> ปฏิเสธก่อนส่งให้ Supabase
+      const emailCheck = await checkEmailDeliverable(b.email)
+      if (!emailCheck.ok) throw badRequest(emailCheck.error)
       const supa = anonClient(c.env)
       const { data, error } = await supa.auth.signUp({
         email: b.email,
@@ -199,25 +203,36 @@ export function registerAuth(app: OpenAPIHono<AppEnv>) {
   )
 
   // ---------- GET /api/auth/me ----------
+  // ไม่คืน 401: ผู้เยี่ยมชมที่ยังไม่ล็อกอินเป็นเรื่องปกติ ไม่ใช่ error
+  // (401 ทำให้ browser พ่น "Failed to load resource" ทุกครั้งที่เปิดเว็บ)
+  // access หมดอายุแต่ยังมี refresh cookie -> ตอบ refreshable=true ให้ client ต่ออายุแล้วถามซ้ำ
   app.openapi(
     createRoute({
       method: 'get',
       path: '/api/auth/me',
       tags: TAG,
-      summary: 'ข้อมูลผู้ใช้ปัจจุบัน (ต้องมี session ที่ยังไม่หมดอายุ)',
-      middleware: [requireAuth] as const,
+      summary: 'ข้อมูลผู้ใช้ปัจจุบัน (user=null เมื่อยังไม่ได้เข้าสู่ระบบ - ไม่คืน 401)',
       responses: {
-        200: jsonRes('ผู้ใช้ปัจจุบัน', z.object({ ok: z.literal(true), user: UserSchema })),
-        401: errRes('เซสชันหมดอายุ/ไม่ได้เข้าสู่ระบบ'),
+        200: jsonRes('ผู้ใช้ปัจจุบัน หรือ user=null (refreshable=true คือมี refresh cookie ให้ลอง POST /api/auth/refresh)', z.object({
+          ok: z.literal(true),
+          user: UserSchema.nullable(),
+          refreshable: z.boolean().optional(),
+        })),
       },
     }),
     async (c) => {
-      const u = c.get('user')
-      const prof = await loadProfile(c.env, c.get('token'), u.id)
-      return c.json({
-        ok: true as const,
-        user: prof ?? { id: u.id, email: u.email, full_name: null, phone: null, role: 'customer' },
-      })
+      const token = getAccessToken(c)
+      if (token) {
+        const u = await getUserFromToken(c.env, token)
+        if (u) {
+          const prof = await loadProfile(c.env, token, u.id)
+          return c.json({
+            ok: true as const,
+            user: prof ?? { id: u.id, email: u.email ?? null, full_name: null, phone: null, role: 'customer' },
+          })
+        }
+      }
+      return c.json({ ok: true as const, user: null, refreshable: !!getRefreshToken(c) })
     }
   )
 }

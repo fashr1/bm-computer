@@ -16,6 +16,8 @@ const OrderSchema = z
     id: z.string(), code: z.string(), user_id: z.string().nullable(), total: z.number(), status: z.string(),
     payment_method: z.string().nullable(), ship_name: z.string().nullable(), ship_phone: z.string().nullable(),
     ship_address: z.string().nullable(), created_at: z.string(), order_items: z.array(OrderItemSchema).optional(),
+    tracking_no: z.string().nullable().optional(), courier: z.string().nullable().optional(),
+    cancel_reason: z.string().nullable().optional(), paid_at: z.string().nullable().optional(),
   })
   .openapi('Order')
 
@@ -37,7 +39,7 @@ export function registerOrders(app: OpenAPIHono<AppEnv>) {
     }),
     async (c) => {
       const uid = c.get('user').id
-      const { items, ship } = c.req.valid('json')
+      const { items, ship } = c.req.valid('json') as z.infer<typeof CreateOrderBody>
       const db = authedDb(c)
       const slugs = items.map((i) => i.slug)
       const { data: prods, error: e1 } = await db.from('products').select('id,slug,name,price,sale_price,stock').in('slug', slugs)
@@ -48,7 +50,7 @@ export function registerOrders(app: OpenAPIHono<AppEnv>) {
         .filter((i) => bySlug[i.slug])
         .map((i) => { const p = bySlug[i.slug]; return { product_id: p.id, name: p.name, price: priceOf(p), qty: i.qty } })
       if (!lines.length) throw badRequest('ไม่มีสินค้าในตะกร้า')
-      const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0)
+      const subtotal = lines.reduce((s: number, l) => s + l.price * l.qty, 0)
       const total = subtotal + (subtotal >= 1500 ? 0 : 80)
       const { data: order, error: e2 } = await db.from('orders').insert({
         user_id: uid, total, status: 'pending', payment_method: 'promptpay',
@@ -74,6 +76,42 @@ export function registerOrders(app: OpenAPIHono<AppEnv>) {
       const { data, error } = await db.from('orders').select('*, order_items(*)').eq('user_id', uid).order('created_at', { ascending: false })
       if (error) throw badRequest(error.message)
       return c.json({ ok: true as const, items: data ?? [] })
+    }
+  )
+
+  // POST /api/orders/{id}/cancel - ลูกค้ายกเลิก/ขอยกเลิกคำสั่งซื้อของตัวเอง
+  // pending (ยังไม่จ่าย) -> ยกเลิกทันที · paid/packing -> ขอยกเลิก รอแอดมินตรวจ+คืนเงิน
+  // shipping/done/cancel* -> ยกเลิกไม่ได้ (ของออกไปแล้ว/จบแล้ว)
+  app.openapi(
+    createRoute({
+      method: 'post', path: '/api/orders/{id}/cancel', tags: TAG, summary: 'ยกเลิก/ขอยกเลิกคำสั่งซื้อของฉัน',
+      middleware: [requireAuth] as const,
+      request: { params: z.object({ id: z.string().uuid() }), body: jsonBody(z.object({ reason: z.string().max(500).optional() })) },
+      responses: {
+        200: jsonRes('สำเร็จ', z.object({ ok: z.literal(true), status: z.string() })),
+        400: errRes('ยกเลิกไม่ได้'), 401: errRes('ต้องเข้าสู่ระบบ'), 404: errRes('ไม่พบคำสั่งซื้อ'),
+      },
+    }),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const { reason } = c.req.valid('json')
+      const db = authedDb(c) // RLS: เห็น/แก้ได้เฉพาะออเดอร์ของตัวเอง
+      const { data: order, error } = await db.from('orders').select('id,status').eq('id', id).maybeSingle()
+      if (error) throw badRequest(error.message)
+      if (!order) throw notFound('ไม่พบคำสั่งซื้อ')
+      if (order.status === 'pending') {
+        const { error: e } = await db.from('orders')
+          .update({ status: 'cancel', cancel_reason: reason || null, canceled_at: new Date().toISOString() }).eq('id', id)
+        if (e) throw badRequest(e.message)
+        return c.json({ ok: true as const, status: 'cancel' })
+      }
+      if (order.status === 'paid' || order.status === 'packing') {
+        const { error: e } = await db.from('orders')
+          .update({ status: 'cancel_requested', cancel_reason: reason || null }).eq('id', id)
+        if (e) throw badRequest(e.message)
+        return c.json({ ok: true as const, status: 'cancel_requested' })
+      }
+      throw badRequest('คำสั่งซื้อนี้ยกเลิกไม่ได้ (จัดส่งแล้ว/ยกเลิกแล้ว)')
     }
   )
 

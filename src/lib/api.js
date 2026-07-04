@@ -58,6 +58,20 @@ export async function fetchCategories() {
   return data || []
 }
 
+// ดัชนีค้นหาแบบเบา (autocomplete) - โหลดครั้งเดียว (ดู lib/searchIndex.js)
+export async function fetchSearchIndex() {
+  if (apiEnabled) return (await api.get('/api/catalog/search-index')).items
+  if (!isSupabaseConfigured) return []
+  const { data, error } = await supabase.from('products')
+    .select('slug,name,price,sale_price,images,categories(slug),brands(name)').eq('is_active', true)
+  if (error) throw error
+  return (data || []).map((r) => {
+    const onSale = r.sale_price && r.sale_price < r.price
+    const imgs = Array.isArray(r.images) ? r.images : []
+    return { slug: r.slug, name: r.name, brand: r.brands?.name || null, cat: r.categories?.slug || null, price: onSale ? r.sale_price : r.price, image: imgs[0] || null }
+  })
+}
+
 // สร้างออเดอร์จริง - โหมด API ผ่าน backend (คิดราคาใหม่ที่ server) · fallback คิดที่นี่แล้วเขียน Supabase
 export async function createOrder({ userId, items, ship }) {
   if (apiEnabled) {
@@ -164,10 +178,50 @@ export async function adminListOrders() {
   if (error) throw error
   return data || []
 }
-export async function updateOrderStatus(id, status) {
-  if (apiEnabled) { await api.patch(`/api/admin/orders/${id}/status`, { status }); return }
-  const { error } = await supabase.from('orders').update({ status }).eq('id', id)
+// อัปเดตออเดอร์ (สถานะ/เลขพัสดุ/ขนส่ง) - โหมด API ตัด-คืนสต็อกให้ที่ backend
+export async function updateOrder(id, patch) {
+  if (apiEnabled) { await api.patch(`/api/admin/orders/${id}`, patch); return }
+  const { error } = await supabase.from('orders').update(patch).eq('id', id)
   if (error) throw error
+}
+// เผื่อโค้ดเก่าเรียก - map ไป updateOrder
+export const updateOrderStatus = (id, status) => updateOrder(id, { status })
+
+export async function adminListCustomers() {
+  if (apiEnabled) return (await api.get('/api/admin/customers')).items
+  const [{ data: profs, error }, { data: orders }] = await Promise.all([
+    supabase.from('profiles').select('id,email,full_name,phone,role,created_at').order('created_at', { ascending: false }),
+    supabase.from('orders').select('user_id,total,status'),
+  ])
+  if (error) throw error
+  const PAID = new Set(['paid', 'packing', 'shipping', 'done'])
+  const stat = {}
+  for (const o of orders || []) {
+    if (!o.user_id) continue
+    const s = (stat[o.user_id] ||= { orders: 0, spent: 0 })
+    s.orders += 1
+    if (PAID.has(o.status)) s.spent += o.total || 0
+  }
+  return (profs || []).map((p) => ({ ...p, orders_count: stat[p.id]?.orders ?? 0, lifetime_value: stat[p.id]?.spent ?? 0 }))
+}
+
+// ลูกค้ายกเลิก/ขอยกเลิกออเดอร์ของตัวเอง
+export async function cancelOrder(id, reason) {
+  if (apiEnabled) return (await api.post(`/api/orders/${id}/cancel`, { reason })).status
+  const { data: order, error: e0 } = await supabase.from('orders').select('id,status').eq('id', id).maybeSingle()
+  if (e0) throw e0
+  if (!order) throw new Error(tOutside('track.notFound'))
+  if (order.status === 'pending') {
+    const { error } = await supabase.from('orders').update({ status: 'cancel', cancel_reason: reason || null, canceled_at: new Date().toISOString() }).eq('id', id)
+    if (error) throw error
+    return 'cancel'
+  }
+  if (order.status === 'paid' || order.status === 'packing') {
+    const { error } = await supabase.from('orders').update({ status: 'cancel_requested', cancel_reason: reason || null }).eq('id', id)
+    if (error) throw error
+    return 'cancel_requested'
+  }
+  throw new Error(tOutside('orders.cannotCancel'))
 }
 
 export async function fetchSetting(key) {
@@ -374,6 +428,37 @@ export async function fetchSharedBuild(code) {
     .select('name,items,budget,updated_at').eq('share_code', code).eq('is_public', true).maybeSingle()
   if (error) throw error
   return data
+}
+
+// สเปคสาธารณะจากชุมชน (ดูของคนอื่น) พร้อม summary (ราคา/จำนวนชิ้น/รูป) - แบ่งหน้า
+export async function fetchCommunityBuilds({ limit = 24, offset = 0 } = {}) {
+  if (apiEnabled) return await api.get('/api/builder/community' + qs({ limit, offset }))
+  if (!isSupabaseConfigured) return { items: [], total: 0 }
+  const { data, error, count } = await supabase.from('builds')
+    .select('share_code,name,author_name,budget,updated_at,items', { count: 'exact' })
+    .eq('is_public', true).order('updated_at', { ascending: false }).range(offset, offset + limit - 1)
+  if (error) throw error
+  const builds = data || []
+  const slugs = [...new Set(builds.flatMap((b) => (b.items || []).map((i) => i.id)))]
+  const priceMap = {}
+  if (slugs.length) {
+    const { data: prods } = await supabase.from('products').select('slug,price,sale_price,images').in('slug', slugs)
+    for (const p of prods || []) {
+      const imgs = Array.isArray(p.images) ? p.images : []
+      priceMap[p.slug] = { price: p.price, sale: p.sale_price, img: imgs[0] || null }
+    }
+  }
+  const items = builds.map((b) => {
+    let total = 0, parts = 0
+    const thumbs = []
+    for (const it of b.items || []) {
+      const p = priceMap[it.id]; const q = it.qty || 1
+      parts += q
+      if (p) { total += (p.sale && p.sale < p.price ? p.sale : p.price) * q; if (p.img && thumbs.length < 4) thumbs.push(p.img) }
+    }
+    return { share_code: b.share_code, name: b.name, author_name: b.author_name || null, budget: b.budget || null, updated_at: b.updated_at, parts, total, thumbs }
+  })
+  return { items, total: count || items.length }
 }
 
 export async function fetchSlides(placement) {

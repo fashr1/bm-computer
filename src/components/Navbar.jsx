@@ -3,9 +3,10 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { Icon } from './Icons'
 import { cx } from '../lib/ui'
 import BrandLogo from './BrandLogo'
+import SearchBox from './SearchBox'
 import { useTheme } from '../theme/ThemeContext'
 import { useLang } from '../i18n/LanguageContext'
-import { useAuthModal } from './AuthModal'
+import { useAuthNav } from '../auth/useAuthNav'
 import { useAuth } from '../auth/AuthContext'
 import { useCart } from '../cart/CartContext'
 import { useCatalog } from '../catalog/CatalogContext'
@@ -22,27 +23,25 @@ function ActionBtn({ children, ...rest }) {
 export default function Navbar() {
   const { theme, toggle } = useTheme()
   const { lang, toggle: toggleLang, t } = useLang()
-  const { open: openAuth } = useAuthModal()
+  const { open: openAuth } = useAuthNav()
   const { user, profile, isAdmin, signOut } = useAuth()
   const { categories, loading: catsLoading, catName } = useCatalog()
   const { count } = useCart()
   const [open, setOpen] = useState(false)
   const [menu, setMenu] = useState(false)
+  const [cats, setCats] = useState(false)
   const menuRef = useRef(null)
+  const catRef = useRef(null)
   const nav = useNavigate()
 
   useEffect(() => {
-    const onDoc = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenu(false) }
+    const onDoc = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenu(false)
+      if (catRef.current && !catRef.current.contains(e.target)) setCats(false)
+    }
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
   }, [])
-
-  const searchSubmit = (e) => {
-    e.preventDefault()
-    const q = new FormData(e.currentTarget).get('q')?.toString().trim()
-    nav(q ? `/products?q=${encodeURIComponent(q)}` : '/products')
-    setOpen(false)
-  }
 
   return (
     <header className="sticky top-0 z-50 bg-zinc-950 text-white shadow-lg shadow-black/20">
@@ -52,10 +51,7 @@ export default function Navbar() {
 
         <BrandLogo emblemClass="h-9 sm:h-11" textWrapClass="hidden sm:block" />
 
-        <form className="hidden flex-1 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 md:flex" role="search" onSubmit={searchSubmit}>
-          <Icon name="search" size={18} className="text-zinc-400" />
-          <input name="q" className="w-full bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none" placeholder={t('common.search')} aria-label={t('common.search')} />
-        </form>
+        <div className="hidden flex-1 md:block"><SearchBox /></div>
 
         <div className="ml-auto flex items-center gap-1">
           <button onClick={toggleLang} title={t('nav.language')}
@@ -118,21 +114,42 @@ export default function Navbar() {
 
       {/* ค้นหา (mobile) */}
       <div className="border-t border-white/10 px-4 py-2.5 md:hidden">
-        <form className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2" role="search" onSubmit={searchSubmit}>
-          <Icon name="search" size={18} className="text-zinc-400" />
-          <input name="q" className="w-full bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none" placeholder={t('common.search')} />
-        </form>
+        <SearchBox onNavigate={() => setOpen(false)} />
       </div>
 
-      <nav className={cx('border-t border-white/10', open ? 'block' : 'hidden md:block')} aria-label="categories">
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-1 overflow-x-auto px-2 md:flex-row md:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <CatLink to="/products" label={t('nav.all')} accent onClick={() => setOpen(false)} />
-          {catsLoading
-            ? Array.from({ length: 8 }).map((_, i) => <span key={i} className="skeleton mx-3 my-3 h-4 w-16 shrink-0 bg-white/10" aria-hidden="true" />)
-            : categories.map((c) => (
-                <CatLink key={c.slug} to={`/products?cat=${c.slug}`} icon={c.icon || 'box'} label={catName(c.slug)} onClick={() => setOpen(false)} />
-              ))}
+      <nav className={cx('border-t border-white/10', open ? 'block' : 'hidden md:block')} aria-label="main">
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-1 px-2 md:flex-row md:items-center md:px-4">
+          {/* หมวดหมู่: dropdown รวมทุกหมวด (จอใหญ่) / รายการเปิดเสมอ (มือถือ) */}
+          <div className="relative md:py-0" ref={catRef}>
+            <button onClick={() => setCats((v) => !v)}
+              className="flex w-full items-center gap-1.5 border-b-2 border-transparent px-3 py-2.5 text-sm font-semibold text-brand-400 transition-colors hover:text-white md:w-auto cursor-pointer">
+              <Icon name="grid" size={16} /> {t('nav.categories')}
+              <Icon name="chevronDown" size={15} className={cx('transition-transform', cats && 'rotate-180')} />
+            </button>
+            {cats && (
+              <div className="z-50 mt-1 w-full rounded-xl border border-line bg-surface p-2 text-fg shadow-xl md:absolute md:left-0 md:top-11 md:mt-0 md:w-[520px]">
+                <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+                  {catsLoading
+                    ? Array.from({ length: 9 }).map((_, i) => <span key={i} className="skeleton m-1 h-9 rounded-lg" aria-hidden="true" />)
+                    : categories.map((c) => (
+                        <Link key={c.slug} to={`/products?cat=${c.slug}`} onClick={() => { setCats(false); setOpen(false) }}
+                          className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-surface2">
+                          <Icon name={c.icon || 'box'} size={17} className="shrink-0 text-brand-600" /> <span className="truncate">{catName(c.slug)}</span>
+                        </Link>
+                      ))}
+                </div>
+                <Link to="/products" onClick={() => { setCats(false); setOpen(false) }}
+                  className="mt-1 flex items-center justify-center gap-1.5 rounded-lg bg-brand-50 px-3 py-2.5 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-100 dark:bg-brand-600/15 dark:hover:bg-brand-600/25">
+                  {t('nav.allCategories')} <Icon name="arrowRight" size={15} />
+                </Link>
+              </div>
+            )}
+          </div>
+
+          <CatLink to="/products" label={t('nav.all')} onClick={() => setOpen(false)} />
           <CatLink to="/builder" icon="cpu" label={t('nav.builder')} onClick={() => setOpen(false)} />
+          <CatLink to="/community" icon="users" label={t('nav.community')} onClick={() => setOpen(false)} />
+          <CatLink to="/track" icon="truck" label={t('nav.track')} onClick={() => setOpen(false)} />
         </div>
       </nav>
     </header>

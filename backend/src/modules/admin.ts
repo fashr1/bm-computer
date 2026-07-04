@@ -2,7 +2,8 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import type { AppEnv } from '../lib/env'
 import { authedDb, anonClient } from '../lib/supabase'
 import { requireAdmin } from '../lib/middleware'
-import { badRequest } from '../lib/http'
+import { badRequest, notFound } from '../lib/http'
+import { ORDER_STATUSES, stockEffect, type OrderStatus } from '../lib/orderflow'
 import { OkSchema, jsonBody, jsonRes, errRes } from '../lib/openapi'
 
 const TAG = ['Admin']
@@ -168,15 +169,68 @@ export function registerAdmin(app: OpenAPIHono<AppEnv>) {
       return c.json({ ok: true as const, items: data ?? [] })
     }
   )
+  // อัปเดตออเดอร์ (สถานะ + เลขพัสดุ/ขนส่ง + เหตุผลยกเลิก) พร้อมตัด/คืนสต็อกอัตโนมัติ
+  const AdminOrderPatch = z.object({
+    status: z.enum(ORDER_STATUSES).optional(),
+    tracking_no: z.string().max(120).nullable().optional(),
+    courier: z.string().max(60).nullable().optional(),
+    cancel_reason: z.string().max(500).nullable().optional(),
+  }).openapi('AdminOrderPatch')
   app.openapi(
-    createRoute({ method: 'patch', path: '/api/admin/orders/{id}/status', tags: TAG, summary: 'อัปเดตสถานะออเดอร์', middleware: [requireAdmin] as const,
-      request: { params: IdParam, body: jsonBody(z.object({ status: z.enum(['pending', 'paid', 'packing', 'shipping', 'done', 'cancel']) })) },
-      responses: { 200: jsonRes('อัปเดตแล้ว', OkSchema), 403: errRes('ต้องเป็นแอดมิน') } }),
+    createRoute({ method: 'patch', path: '/api/admin/orders/{id}', tags: TAG, summary: 'อัปเดตออเดอร์ (สถานะ/จัดส่ง) + ตัด-คืนสต็อก', middleware: [requireAdmin] as const,
+      request: { params: IdParam, body: jsonBody(AdminOrderPatch) },
+      responses: { 200: jsonRes('อัปเดตแล้ว', OkSchema), 400: errRes('error'), 403: errRes('ต้องเป็นแอดมิน'), 404: errRes('ไม่พบคำสั่งซื้อ') } }),
     async (c) => {
-      const { status } = c.req.valid('json')
-      const { error } = await authedDb(c).from('orders').update({ status }).eq('id', c.req.valid('param').id)
+      const { id } = c.req.valid('param')
+      const b = c.req.valid('json')
+      const db = authedDb(c)
+      const { data: order, error: e0 } = await db.from('orders').select('id,status,stock_deducted').eq('id', id).maybeSingle()
+      if (e0) throw badRequest(e0.message)
+      if (!order) throw notFound('ไม่พบคำสั่งซื้อ')
+      const patch: Record<string, unknown> = {}
+      if (b.tracking_no !== undefined) patch.tracking_no = b.tracking_no
+      if (b.courier !== undefined) patch.courier = b.courier
+      if (b.cancel_reason !== undefined) patch.cancel_reason = b.cancel_reason
+      if (b.status !== undefined && b.status !== order.status) {
+        patch.status = b.status
+        const { dir, deducted } = stockEffect(b.status as OrderStatus, !!order.stock_deducted)
+        if (dir !== 0) {
+          const { error: eStock } = await db.rpc('adjust_order_stock', { p_order: id, p_dir: dir })
+          if (eStock) throw badRequest('ปรับสต็อกไม่สำเร็จ: ' + eStock.message)
+          patch.stock_deducted = deducted
+          if (dir === -1) patch.paid_at = new Date().toISOString()
+        }
+        if (b.status === 'cancel' || b.status === 'refunded') patch.canceled_at = new Date().toISOString()
+      }
+      if (Object.keys(patch).length === 0) return c.json({ ok: true as const })
+      const { error } = await db.from('orders').update(patch).eq('id', id)
       if (error) throw badRequest(error.message)
       return c.json({ ok: true as const })
+    }
+  )
+
+  // ---------- CUSTOMERS ----------
+  app.openapi(
+    createRoute({ method: 'get', path: '/api/admin/customers', tags: TAG, summary: 'รายชื่อลูกค้า + สถิติออเดอร์', middleware: [requireAdmin] as const,
+      responses: { 200: okItems, 403: errRes('ต้องเป็นแอดมิน') } }),
+    async (c) => {
+      const db = authedDb(c) // RLS "admin manage profiles" -> แอดมินเห็นทุกคน
+      const [{ data: profs, error: e1 }, { data: orders, error: e2 }] = await Promise.all([
+        db.from('profiles').select('id,email,full_name,phone,role,created_at').order('created_at', { ascending: false }),
+        db.from('orders').select('user_id,total,status'),
+      ])
+      if (e1) throw badRequest(e1.message)
+      if (e2) throw badRequest(e2.message)
+      const PAID = new Set(['paid', 'packing', 'shipping', 'done'])
+      const stat: Record<string, { orders: number; spent: number }> = {}
+      for (const o of orders ?? []) {
+        if (!o.user_id) continue
+        const s = (stat[o.user_id] ||= { orders: 0, spent: 0 })
+        s.orders += 1
+        if (PAID.has(o.status)) s.spent += o.total || 0
+      }
+      const items = (profs ?? []).map((p: any) => ({ ...p, orders_count: stat[p.id]?.orders ?? 0, lifetime_value: stat[p.id]?.spent ?? 0 }))
+      return c.json({ ok: true as const, items })
     }
   )
 

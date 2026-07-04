@@ -32,6 +32,13 @@ const BuildSchema = z.object({
 const IdParam = z.object({ id: z.string().uuid() })
 const SELECT = 'id,name,share_code,items,budget,is_public,created_at,updated_at'
 
+// ชื่อผู้สร้าง (ชื่อจริงจาก profile ตัวเอง - fallback ส่วนหน้าอีเมล) เก็บบนแถว build
+async function authorName(c: any): Promise<string | null> {
+  const user = c.get('user')!
+  const { data } = await authedDb(c).from('profiles').select('full_name').eq('id', user.id).maybeSingle()
+  return data?.full_name || (user.email ? user.email.split('@')[0] : null)
+}
+
 // ตรวจว่า product slug ใน items มีอยู่จริงและยังขายอยู่ (กันบันทึกขยะ/id มั่ว)
 async function validateItems(env: AppEnv['Bindings'], items: { slot: string; id: string; qty: number }[]) {
   if (!items.length) return
@@ -73,8 +80,9 @@ export function registerBuilder(app: OpenAPIHono<AppEnv>) {
       const db = authedDb(c)
       const { count } = await db.from('builds').select('id', { count: 'exact', head: true })
       if ((count ?? 0) >= MAX_BUILDS_PER_USER) throw badRequest(`บันทึกได้สูงสุด ${MAX_BUILDS_PER_USER} สเปค กรุณาลบสเปคเก่าก่อน`)
+      const author = await authorName(c)
       const { data, error } = await db.from('builds')
-        .insert({ user_id: user.id, name: b.name, items: b.items, budget: b.budget ?? null, is_public: !!b.is_public })
+        .insert({ user_id: user.id, name: b.name, items: b.items, budget: b.budget ?? null, is_public: !!b.is_public, author_name: author })
         .select(SELECT).single()
       if (error) throw badRequest(error.message)
       return c.json({ ok: true as const, build: data })
@@ -143,6 +151,54 @@ export function registerBuilder(app: OpenAPIHono<AppEnv>) {
         .select(SELECT).single()
       if (e2) throw badRequest(e2.message)
       return c.json({ ok: true as const, build: data })
+    }
+  )
+
+  // ---------- GET /api/builder/community - สเปคสาธารณะจากผู้ใช้คนอื่น (public, มี summary) ----------
+  const CommunityItem = z.object({
+    share_code: z.string(), name: z.string(), author_name: z.string().nullable(),
+    budget: z.number().nullable(), updated_at: z.string(),
+    parts: z.number(), total: z.number(), thumbs: z.array(z.string()),
+  }).openapi('CommunityBuild')
+  app.openapi(
+    createRoute({
+      method: 'get', path: '/api/builder/community', tags: TAG, summary: 'สเปคสาธารณะจากชุมชน (ดูของคนอื่น)',
+      request: { query: z.object({ limit: z.coerce.number().int().positive().max(48).optional(), offset: z.coerce.number().int().min(0).optional() }) },
+      responses: { 200: jsonRes('สำเร็จ', z.object({ ok: z.literal(true), items: z.array(CommunityItem), total: z.number() })) },
+    }),
+    async (c) => {
+      const { limit = 24, offset = 0 } = c.req.valid('query')
+      const db = anonClient(c.env) // RLS: อ่านได้เฉพาะ is_public=true
+      const { data, error, count } = await db.from('builds')
+        .select('share_code,name,author_name,budget,updated_at,items', { count: 'exact' })
+        .eq('is_public', true).order('updated_at', { ascending: false }).range(offset, offset + limit - 1)
+      if (error) throw badRequest(error.message)
+      const builds = data ?? []
+      // ดึงราคา/รูป ของ slug ทั้งหมดในหน้านี้ครั้งเดียว แล้วคำนวณ summary ต่อสเปค
+      const slugs = [...new Set(builds.flatMap((b: any) => (b.items || []).map((i: any) => i.id)))]
+      const priceMap: Record<string, { price: number; sale: number | null; img: string | null }> = {}
+      if (slugs.length) {
+        const { data: prods } = await db.from('products').select('slug,price,sale_price,images').in('slug', slugs)
+        for (const p of prods ?? []) {
+          const imgs = Array.isArray(p.images) ? p.images : []
+          priceMap[p.slug] = { price: p.price, sale: p.sale_price, img: imgs[0] || null }
+        }
+      }
+      const items = builds.map((b: any) => {
+        let total = 0, parts = 0
+        const thumbs: string[] = []
+        for (const it of b.items || []) {
+          const p = priceMap[it.id]
+          const qty = it.qty || 1
+          parts += qty
+          if (p) {
+            total += (p.sale && p.sale < p.price ? p.sale : p.price) * qty
+            if (p.img && thumbs.length < 4) thumbs.push(p.img)
+          }
+        }
+        return { share_code: b.share_code, name: b.name, author_name: b.author_name ?? null, budget: b.budget ?? null, updated_at: b.updated_at, parts, total, thumbs }
+      })
+      return c.json({ ok: true as const, items, total: count ?? items.length })
     }
   )
 

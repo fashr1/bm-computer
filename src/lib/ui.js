@@ -19,8 +19,12 @@ export const orderStatusCls = {
   packing: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
   shipping: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
   done: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+  cancel_requested: 'bg-orange-500/15 text-orange-600 dark:text-orange-400',
   cancel: 'bg-zinc-500/15 text-zinc-500',
+  refunded: 'bg-purple-500/15 text-purple-600 dark:text-purple-400',
 }
 
 // ลำดับขั้นตอนของออเดอร์ (ใช้ใน progress ติดตาม)
 export const orderFlow = ['pending', 'paid', 'packing', 'shipping', 'done']
+// สถานะทั้งหมด (ใช้ใน dropdown ของแอดมิน)
+export const orderStatusAll = ['pending', 'paid', 'packing', 'shipping', 'done', 'cancel_requested', 'cancel', 'refunded']

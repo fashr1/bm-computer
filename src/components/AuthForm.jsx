@@ -6,6 +6,7 @@ import { apiEnabled } from '../lib/apiClient'
 import { authApi } from '../lib/accountApi'
 import { useAuth, OAUTH_FLAG } from '../auth/AuthContext'
 import Turnstile, { turnstileEnabled } from './Turnstile'
+import { suggestEmailFix, isDisposableEmail } from '../lib/emailCheck'
 
 const input = 'w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20'
 
@@ -18,7 +19,7 @@ function checkPw(pw) {
   return { len, num, special, met, valid: len && num && special }
 }
 
-export default function AuthForm({ view, setView, onClose }) {
+export default function AuthForm({ view, setView, onClose, redirectTo }) {
   const { t } = useLang()
   const { reload } = useAuth()
   const isLogin = view === 'login'
@@ -33,7 +34,10 @@ export default function AuthForm({ view, setView, onClose }) {
 
   const pw = checkPw(f.password)
   const mismatch = !isLogin && f.confirm.length > 0 && f.password !== f.confirm
-  const baseValid = isLogin ? f.email && f.password : (f.fullName && f.phone && f.email && pw.valid && !mismatch)
+  // กันอีเมล bounce (สมัครเท่านั้น): โดเมนพิมพ์ผิด -> เสนอแก้ให้กดได้ · อีเมลชั่วคราว -> บล็อก
+  const emailSuggest = !isLogin && f.email.includes('@') ? suggestEmailFix(f.email) : null
+  const emailDisposable = !isLogin && f.email.includes('@') && isDisposableEmail(f.email)
+  const baseValid = isLogin ? f.email && f.password : (f.fullName && f.phone && f.email && pw.valid && !mismatch && !emailDisposable)
   const canSubmit = baseValid && (!turnstileEnabled || captcha)
 
   const level = pw.met <= 1 ? 0 : pw.met === 2 ? 1 : 2
@@ -91,8 +95,8 @@ export default function AuthForm({ view, setView, onClose }) {
     setError(''); setGLoading(true)
     // ตั้ง flag ให้ตอนกลับมาจาก Google โชว์ overlay "กำลังเข้าสู่ระบบ" (อ่านใน AuthContext)
     try { sessionStorage.setItem(OAUTH_FLAG, '1') } catch { /* ignore */ }
-    // เก็บ path ปัจจุบันไว้ กลับมาหน้าเดิมหลังล็อกอินสำเร็จ
-    const back = window.location.pathname + window.location.search
+    // เก็บ path ปัจจุบันไว้ กลับมาหน้าเดิมหลังล็อกอินสำเร็จ (หน้า login ส่ง redirectTo มาให้)
+    const back = redirectTo || (window.location.pathname + window.location.search)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -136,7 +140,17 @@ export default function AuthForm({ view, setView, onClose }) {
             <div><label className="mb-1.5 block text-sm font-semibold">{t('auth.phone')}</label><input className={input} value={f.phone} onChange={set('phone')} type="tel" inputMode="tel" autoComplete="tel" placeholder={t('auth.phone')} /></div>
           </>
         )}
-        <div><label className="mb-1.5 block text-sm font-semibold">{t('auth.email')}</label><input className={input} value={f.email} onChange={set('email')} type="email" placeholder={t('auth.email')} autoComplete="email" /></div>
+        <div>
+          <label className="mb-1.5 block text-sm font-semibold">{t('auth.email')}</label>
+          <input className={input} value={f.email} onChange={set('email')} type="email" placeholder={t('auth.email')} autoComplete="email" />
+          {emailSuggest && (
+            <button type="button" onClick={() => setF((s) => ({ ...s, email: emailSuggest }))}
+              className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-600 hover:underline dark:text-amber-400 cursor-pointer">
+              <Icon name="alert" size={13} /> {t('auth.emailTypo', { email: emailSuggest })}
+            </button>
+          )}
+          {emailDisposable && <span className="mt-1.5 block text-xs text-red-500">{t('auth.emailDisposable')}</span>}
+        </div>
         <div>
           <div className="mb-1.5 flex items-center justify-between">
             <label className="text-sm font-semibold">{t('auth.password')}</label>

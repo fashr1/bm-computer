@@ -17,8 +17,9 @@ export class ApiError extends Error {
 }
 
 // ต่ออายุ session ครั้งเดียว (กัน refresh ซ้อนกันหลายรีเควสต์)
+// export ให้ AuthContext ใช้ตอน /me ตอบ user=null + refreshable=true (access หมดอายุแต่ refresh ยังไม่หมด)
 let refreshPromise = null
-function refreshSession() {
+export function refreshSession() {
   if (!refreshPromise) {
     refreshPromise = fetch(BASE + '/api/auth/refresh', { method: 'POST', credentials: 'include' })
       .then((r) => r.ok)

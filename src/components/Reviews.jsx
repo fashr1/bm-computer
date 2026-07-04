@@ -3,7 +3,7 @@ import { Icon } from './Icons'
 import { cx } from '../lib/ui'
 import { useLang } from '../i18n/LanguageContext'
 import { useAuth } from '../auth/AuthContext'
-import { useAuthModal } from './AuthModal'
+import { useAuthNav } from '../auth/useAuthNav'
 import { fetchReviews, saveReview, deleteReview } from '../lib/api'
 import { useFetch } from '../lib/useFetch'
 import { Skeleton } from './Skeleton'
@@ -13,7 +13,7 @@ import { Skeleton } from './Skeleton'
 export default function Reviews({ slug, fallbackRating }) {
   const { t, lang } = useLang()
   const { user } = useAuth()
-  const { open: openAuth } = useAuthModal()
+  const { open: openAuth } = useAuthNav()
   const [key, setKey] = useState(0)
   const { data, loading } = useFetch(() => fetchReviews(slug), [slug, key, user?.id])
   const items = data || []

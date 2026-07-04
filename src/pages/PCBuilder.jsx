@@ -5,7 +5,7 @@ import { Icon } from '../components/Icons'
 import { cx } from '../lib/ui'
 import { useLang } from '../i18n/LanguageContext'
 import { useAuth } from '../auth/AuthContext'
-import { useAuthModal } from '../components/AuthModal'
+import { useAuthNav } from '../auth/useAuthNav'
 import { useCart } from '../cart/CartContext'
 import { usePageMeta } from '../lib/usePageMeta'
 import { fetchProducts, fetchAttributeDefs, fetchSharedBuild } from '../lib/api'
@@ -28,7 +28,7 @@ function loadDraft() {
 export default function PCBuilder() {
   const { t, lang } = useLang()
   const { user } = useAuth()
-  const { open: openAuth } = useAuthModal()
+  const { open: openAuth } = useAuthNav()
   const { add } = useCart()
   const nav = useNavigate()
   const [params] = useSearchParams()

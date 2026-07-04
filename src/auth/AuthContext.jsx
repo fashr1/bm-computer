@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { apiEnabled } from '../lib/apiClient'
+import { apiEnabled, refreshSession } from '../lib/apiClient'
 import { authApi } from '../lib/accountApi'
 
 const Ctx = createContext(null)
@@ -27,13 +27,18 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [oauthPending, setOauthPending] = useState(isOAuthReturn)
 
-  // โหลดผู้ใช้ปัจจุบันจาก backend (session อยู่ใน HttpOnly cookie - apiClient จะ refresh ให้เองถ้า access หมดอายุ)
+  // โหลดผู้ใช้ปัจจุบันจาก backend (session อยู่ใน HttpOnly cookie)
+  // /me ตอบ 200 เสมอ: user=null คือยังไม่ล็อกอิน · refreshable=true คือ access หมดอายุ
+  // แต่ refresh cookie ยังอยู่ -> ต่ออายุแล้วถามซ้ำ (ก่อนหน้านี้เคสนี้กลายเป็น "โดนเด้งออกเงียบๆ")
   const reload = useCallback(async () => {
     if (!apiEnabled) return
     try {
-      const { user: u } = await authApi.me()
-      setUser({ id: u.id, email: u.email })
-      setProfile(u)
+      let { user: u, refreshable } = await authApi.me()
+      if (!u && refreshable && (await refreshSession())) {
+        ({ user: u } = await authApi.me())
+      }
+      setUser(u ? { id: u.id, email: u.email } : null)
+      setProfile(u || null)
     } catch {
       setUser(null)
       setProfile(null)

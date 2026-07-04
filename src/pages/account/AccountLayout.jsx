@@ -4,7 +4,7 @@ import { Icon } from '../../components/Icons'
 import { cx } from '../../lib/ui'
 import { useLang } from '../../i18n/LanguageContext'
 import { useAuth } from '../../auth/AuthContext'
-import { useAuthModal } from '../../components/AuthModal'
+import { useAuthNav } from '../../auth/useAuthNav'
 import { accountApi } from '../../lib/accountApi'
 import { apiEnabled } from '../../lib/apiClient'
 import { usePageMeta } from '../../lib/usePageMeta'
@@ -40,7 +40,7 @@ export default function AccountLayout() {
   const { t } = useLang()
   const { user, profile, loading } = useAuth()
   usePageMeta(t('account.title'))
-  const { open: openAuth } = useAuthModal()
+  const { open: openAuth } = useAuthNav()
   const nav = useNavigate()
   const [summary, setSummary] = useState({ done: 0, shipping: 0, processing: 0, awaitingPayment: 0 })
 

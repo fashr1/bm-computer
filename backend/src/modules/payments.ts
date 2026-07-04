@@ -63,15 +63,20 @@ export function registerPayments(app: OpenAPIHono<AppEnv>) {
 
       // 2) หาออเดอร์ (service_role ข้าม RLS ฝั่ง server)
       const db = adminClient(c.env)
-      const { data: order } = await db.from('orders').select('id,total,status').eq('code', orderCode).maybeSingle()
+      const { data: order } = await db.from('orders').select('id,total,status,stock_deducted').eq('code', orderCode).maybeSingle()
       if (!order) throw notFound('ไม่พบคำสั่งซื้อ')
       if (PAID.includes(order.status)) return c.json({ ok: true as const, already: true, message: 'คำสั่งซื้อนี้ชำระแล้ว' })
 
       // 3) ยอดต้องพอ
       if (Math.floor(amount) < order.total) throw badRequest(`ยอดโอน ฿${amount} น้อยกว่ายอดที่ต้องชำระ ฿${order.total}`)
 
-      // 4) อัปเดตเป็นชำระแล้ว
-      const { error: upErr } = await db.from('orders').update({ status: 'paid' }).eq('id', order.id)
+      // 4) ตัดสต็อกตอนจ่ายจริง (atomic, idempotent ด้วยแฟล็ก stock_deducted) แล้วตั้งเป็นชำระแล้ว
+      if (!order.stock_deducted) {
+        const { error: eStock } = await db.rpc('adjust_order_stock', { p_order: order.id, p_dir: -1 })
+        if (eStock) throw serverError('ตัดสต็อกไม่สำเร็จ: ' + eStock.message)
+      }
+      const { error: upErr } = await db.from('orders')
+        .update({ status: 'paid', stock_deducted: true, paid_at: new Date().toISOString() }).eq('id', order.id)
       if (upErr) throw serverError('อัปเดตสถานะไม่สำเร็จ')
 
       return c.json({ ok: true as const, amount, transRef })

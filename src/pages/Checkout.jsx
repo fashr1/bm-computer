@@ -6,7 +6,7 @@ import { cx } from '../lib/ui'
 import { useLang } from '../i18n/LanguageContext'
 import { useCart } from '../cart/CartContext'
 import { useAuth } from '../auth/AuthContext'
-import { useAuthModal } from '../components/AuthModal'
+import { useAuthNav } from '../auth/useAuthNav'
 import { createOrder, fetchSetting } from '../lib/api'
 import { api, apiEnabled, ApiError } from '../lib/apiClient'
 import { useFetch } from '../lib/useFetch'
@@ -21,7 +21,7 @@ export default function Checkout() {
   const { items, subtotal, shipping, total, clear } = useCart()
   usePageMeta(t('cart.checkout'))
   const { user, profile } = useAuth()
-  const { open: openAuth } = useAuthModal()
+  const { open: openAuth } = useAuthNav()
   const nav = useNavigate()
   const [form, setForm] = useState({ name: '', phone: '', address: '' })
   const [loading, setLoading] = useState(false)

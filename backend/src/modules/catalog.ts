@@ -102,6 +102,30 @@ export function registerCatalog(app: OpenAPIHono<AppEnv>) {
     }
   )
 
+  // GET /api/catalog/search-index - ดัชนีค้นหาแบบเบา (ทุกสินค้าที่ขายอยู่) สำหรับ autocomplete
+  // ส่งเฉพาะฟิลด์ที่ใช้แสดง/จับคู่ -> โหลดครั้งเดียวฝั่ง client แล้วค้นหา fuzzy ได้ทันที
+  const SearchItem = z.object({
+    slug: z.string(), name: z.string(), brand: z.string().nullable(),
+    cat: z.string().nullable(), price: z.number(), image: z.string().nullable(),
+  }).openapi('SearchIndexItem')
+  app.openapi(
+    createRoute({
+      method: 'get', path: '/api/catalog/search-index', tags: TAG, summary: 'ดัชนีค้นหา (autocomplete)',
+      responses: { 200: jsonRes('สำเร็จ', z.object({ ok: z.literal(true), items: z.array(SearchItem) })) },
+    }),
+    async (c) => {
+      const { data, error } = await anonClient(c.env).from('products')
+        .select('slug,name,price,sale_price,images,categories(slug),brands(name)').eq('is_active', true)
+      if (error) throw badRequest(error.message)
+      const items = (data ?? []).map((r: any) => {
+        const onSale = r.sale_price && r.sale_price < r.price
+        const imgs = Array.isArray(r.images) ? r.images : []
+        return { slug: r.slug, name: r.name, brand: r.brands?.name ?? null, cat: r.categories?.slug ?? null, price: onSale ? r.sale_price : r.price, image: imgs[0] || null }
+      })
+      return c.json({ ok: true as const, items })
+    }
+  )
+
   // GET /api/catalog/categories
   app.openapi(
     createRoute({

@@ -4,7 +4,7 @@ import { Icon } from '../components/Icons'
 import { orderStatusCls, cx } from '../lib/ui'
 import { useLang } from '../i18n/LanguageContext'
 import { useAuth } from '../auth/AuthContext'
-import { useAuthModal } from '../components/AuthModal'
+import { useAuthNav } from '../auth/useAuthNav'
 import { fetchMyOrders } from '../lib/api'
 import { useFetch } from '../lib/useFetch'
 import { OrderListSkeleton } from '../components/Skeleton'
@@ -15,7 +15,7 @@ const wrap = 'mx-auto max-w-[1200px] px-4'
 export default function OrderHistory() {
   const { t, lang } = useLang()
   const { user } = useAuth()
-  const { open: openAuth } = useAuthModal()
+  const { open: openAuth } = useAuthNav()
   const { data, loading } = useFetch(() => (user ? fetchMyOrders(user.id) : Promise.resolve([])), [user?.id])
   const orders = data || []
   usePageMeta(t('orders.title'))

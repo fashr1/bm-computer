@@ -7,7 +7,7 @@ import { useLang } from '../i18n/LanguageContext'
 import { useCart } from '../cart/CartContext'
 import { useAuth } from '../auth/AuthContext'
 import { useWishlist } from '../wishlist/WishlistContext'
-import { useAuthModal } from './AuthModal'
+import { useAuthNav } from '../auth/useAuthNav'
 import { useCatalog } from '../catalog/CatalogContext'
 
 export default function ProductCard({ p }) {
@@ -16,7 +16,7 @@ export default function ProductCard({ p }) {
   const { add } = useCart()
   const { user } = useAuth()
   const wl = useWishlist()
-  const { open: openAuth } = useAuthModal()
+  const { open: openAuth } = useAuthNav()
   const [added, setAdded] = useState(false)
   const b = p.badge ? badgeMap[p.badge] : null
   const liked = wl?.has(p.id)

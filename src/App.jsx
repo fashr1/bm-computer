@@ -1,9 +1,8 @@
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
+import { Routes, Route, useLocation, Outlet } from 'react-router-dom'
 import { useEffect } from 'react'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import { Icon, IconGoogle } from './components/Icons'
-import { AuthModalProvider, useAuthModal } from './components/AuthModal'
 import { useLang } from './i18n/LanguageContext'
 import { useAuth } from './auth/AuthContext'
 
@@ -15,7 +14,17 @@ import Checkout from './pages/Checkout'
 import OrderTracking from './pages/OrderTracking'
 import OrderHistory from './pages/OrderHistory'
 import PCBuilder from './pages/PCBuilder'
-import AdminDashboard from './pages/AdminDashboard'
+import CommunityBuilds from './pages/CommunityBuilds'
+import AuthPage from './pages/AuthPage'
+import AdminLayout from './pages/admin/AdminLayout'
+import AdminOverview from './pages/admin/AdminOverview'
+import AdminProducts from './pages/admin/AdminProducts'
+import AdminCatalog from './pages/admin/AdminCatalog'
+import AdminSlides from './pages/admin/AdminSlides'
+import AdminOrders from './pages/admin/AdminOrders'
+import AdminPayments from './pages/admin/AdminPayments'
+import AdminCustomers from './pages/admin/AdminCustomers'
+import AdminSettings from './pages/admin/AdminSettings'
 import AccountLayout from './pages/account/AccountLayout'
 import Profile from './pages/account/Profile'
 import Addresses from './pages/account/Addresses'
@@ -28,13 +37,6 @@ function ScrollTop() {
   const { pathname } = useLocation()
   useEffect(() => window.scrollTo(0, 0), [pathname])
   return null
-}
-
-// /login, /register -> เปิด popup modal แล้วพากลับหน้าแรก (รองรับลิงก์ตรง)
-function AuthRedirect({ view }) {
-  const { open } = useAuthModal()
-  useEffect(() => { open(view) }, [view, open])
-  return <Navigate to="/" replace />
 }
 
 // overlay ตอนกลับมาจากหน้า Google OAuth: ให้เห็นสถานะ "กำลังเข้าสู่ระบบ" ชัดเจน
@@ -59,43 +61,66 @@ function GoogleSignInOverlay() {
   )
 }
 
-export default function App() {
+// เปลือกหน้าร้าน (topbar + Navbar + Footer) - ครอบทุกหน้าฝั่งลูกค้าผ่าน <Outlet/>
+// หน้า /admin ไม่ใช้เปลือกนี้ (มี AdminLayout เต็มหน้า + sidebar ของตัวเอง)
+function StorefrontShell() {
   const { t } = useLang()
   return (
-    <AuthModalProvider>
-      <div className="flex min-h-dvh flex-col bg-bg text-fg">
-        <GoogleSignInOverlay />
-        <div className="flex items-center justify-center gap-2 bg-zinc-900 px-4 py-1.5 text-center text-xs text-zinc-400">
-          <Icon name="truck" size={14} className="shrink-0 text-brand-400" />
-          {t('common.topbar')}
-        </div>
-        <Navbar />
-        <ScrollTop />
-        <main className="flex-1">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/products" element={<ProductList />} />
-            <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/login" element={<AuthRedirect view="login" />} />
-            <Route path="/register" element={<AuthRedirect view="register" />} />
-            <Route path="/track" element={<OrderTracking />} />
-            <Route path="/orders" element={<OrderHistory />} />
-            <Route path="/builder" element={<PCBuilder />} />
-            <Route path="/account" element={<AccountLayout />}>
-              <Route index element={<Profile />} />
-              <Route path="addresses" element={<Addresses />} />
-              <Route path="tax" element={<TaxProfiles />} />
-              <Route path="payment" element={<PaymentMethods />} />
-              <Route path="wishlist" element={<Wishlist />} />
-            </Route>
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
-        <Footer />
+    <div className="flex min-h-dvh flex-col bg-bg text-fg">
+      <div className="flex items-center justify-center gap-2 bg-zinc-900 px-4 py-1.5 text-center text-xs text-zinc-400">
+        <Icon name="truck" size={14} className="shrink-0 text-brand-400" />
+        {t('common.topbar')}
       </div>
-    </AuthModalProvider>
+      <Navbar />
+      <main className="flex-1">
+        <Outlet />
+      </main>
+      <Footer />
+    </div>
+  )
+}
+
+export default function App() {
+  return (
+    <>
+      <GoogleSignInOverlay />
+      <ScrollTop />
+      <Routes>
+        {/* Admin: เลย์เอาต์เต็มหน้าแยกจากหน้าร้าน (sidebar เปลี่ยนทุกหน้า) */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminOverview />} />
+          <Route path="products" element={<AdminProducts />} />
+          <Route path="catalog" element={<AdminCatalog />} />
+          <Route path="slides" element={<AdminSlides />} />
+          <Route path="orders" element={<AdminOrders />} />
+          <Route path="payments" element={<AdminPayments />} />
+          <Route path="customers" element={<AdminCustomers />} />
+          <Route path="settings" element={<AdminSettings />} />
+        </Route>
+        {/* หน้าร้าน */}
+        <Route element={<StorefrontShell />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/products" element={<ProductList />} />
+          <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/login" element={<AuthPage view="login" />} />
+          <Route path="/register" element={<AuthPage view="register" />} />
+          <Route path="/track" element={<OrderTracking />} />
+          <Route path="/orders" element={<OrderHistory />} />
+          <Route path="/builder" element={<PCBuilder />} />
+          <Route path="/community" element={<CommunityBuilds />} />
+          <Route path="/community/:code" element={<CommunityBuilds />} />
+          <Route path="/account" element={<AccountLayout />}>
+            <Route index element={<Profile />} />
+            <Route path="addresses" element={<Addresses />} />
+            <Route path="tax" element={<TaxProfiles />} />
+            <Route path="payment" element={<PaymentMethods />} />
+            <Route path="wishlist" element={<Wishlist />} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+    </>
   )
 }
