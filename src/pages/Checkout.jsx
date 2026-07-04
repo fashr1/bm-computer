@@ -9,6 +9,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useAuthNav } from '../auth/useAuthNav'
 import { createOrder, fetchSetting } from '../lib/api'
 import { api, apiEnabled, ApiError } from '../lib/apiClient'
+import { accountApi } from '../lib/accountApi'
 import { useFetch } from '../lib/useFetch'
 import { promptpayQrUrl } from '../lib/promptpay'
 import { usePageMeta } from '../lib/usePageMeta'
@@ -27,11 +28,33 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [placed, setPlaced] = useState(null) // ออเดอร์ที่สร้างแล้ว (เข้าสู่ขั้นชำระเงิน)
+  const [savedAddrs, setSavedAddrs] = useState([])
+  const [addrMode, setAddrMode] = useState('new')
   const set = (k) => (e) => setForm((s) => ({ ...s, [k]: e.target.value }))
+
+  function applyAddr(a) {
+    setForm((s) => ({
+      ...s,
+      name: a.recipient || s.name,
+      phone: a.phone || s.phone,
+      address: [a.line1, a.district, a.amphoe, a.province, a.postcode].filter(Boolean).join(' '),
+    }))
+  }
 
   useEffect(() => {
     if (profile) setForm((s) => ({ ...s, name: s.name || profile.full_name || '', phone: s.phone || profile.phone || '' }))
   }, [profile])
+
+  useEffect(() => {
+    if (!user) return
+    accountApi.listAddresses().then(({ items }) => {
+      if (!items?.length) return
+      setSavedAddrs(items)
+      const def = items.find((a) => a.is_default) || items[0]
+      setAddrMode(`saved-${def.id}`)
+      applyAddr(def)
+    }).catch(() => {})
+  }, [user])
 
   if (!placed && items.length === 0) {
     return (
@@ -73,11 +96,40 @@ export default function Checkout() {
           {!placed ? (
             <section className="rounded-2xl border border-line bg-surface p-5">
               <h3 className="mb-4 font-bold">{t('checkout.address')}</h3>
-              <div className="flex flex-wrap gap-4">
-                <div className="min-w-[200px] flex-1"><label className="mb-1.5 block text-sm font-semibold">{t('checkout.name')}</label><input className={input} value={form.name} onChange={set('name')} autoComplete="name" /></div>
-                <div className="min-w-[200px] flex-1"><label className="mb-1.5 block text-sm font-semibold">{t('checkout.phone')}</label><input className={input} value={form.phone} onChange={set('phone')} inputMode="tel" autoComplete="tel" /></div>
-              </div>
-              <div className="mt-4"><label className="mb-1.5 block text-sm font-semibold">{t('checkout.addr')}</label><textarea className={input} rows="3" value={form.address} onChange={set('address')} placeholder={t('checkout.addrPlaceholder')} /></div>
+
+              {savedAddrs.length > 0 && (
+                <div className="mb-4 flex flex-col gap-2">
+                  <p className="text-sm font-semibold text-muted">{t('checkout.savedAddr')}</p>
+                  {savedAddrs.map((a) => (
+                    <label key={a.id} className={cx('flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors', addrMode === `saved-${a.id}` ? 'border-brand-500 bg-brand-500/5' : 'border-line hover:border-brand-400')}>
+                      <input type="radio" name="addrMode" value={`saved-${a.id}`} checked={addrMode === `saved-${a.id}`} onChange={() => { setAddrMode(`saved-${a.id}`); applyAddr(a) }} className="mt-1 accent-brand-600" />
+                      <div className="text-sm leading-relaxed">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-semibold">{a.recipient}</span>
+                          {a.label && <span className="rounded bg-surface2 px-1.5 py-0.5 text-xs text-muted">{a.label}</span>}
+                          {a.is_default && <span className="text-xs font-medium text-brand-500">{t('checkout.defaultAddr')}</span>}
+                        </div>
+                        <div className="text-muted">{a.phone}</div>
+                        <div className="text-muted">{[a.line1, a.district, a.amphoe, a.province, a.postcode].filter(Boolean).join(' ')}</div>
+                      </div>
+                    </label>
+                  ))}
+                  <label className={cx('flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors', addrMode === 'new' ? 'border-brand-500 bg-brand-500/5' : 'border-line hover:border-brand-400')}>
+                    <input type="radio" name="addrMode" value="new" checked={addrMode === 'new'} onChange={() => setAddrMode('new')} className="accent-brand-600" />
+                    <span className="text-sm font-semibold">{t('checkout.useNewAddr')}</span>
+                  </label>
+                </div>
+              )}
+
+              {addrMode === 'new' && (
+                <>
+                  <div className="flex flex-wrap gap-4">
+                    <div className="min-w-[200px] flex-1"><label className="mb-1.5 block text-sm font-semibold">{t('checkout.name')}</label><input className={input} value={form.name} onChange={set('name')} autoComplete="name" /></div>
+                    <div className="min-w-[200px] flex-1"><label className="mb-1.5 block text-sm font-semibold">{t('checkout.phone')}</label><input className={input} value={form.phone} onChange={set('phone')} inputMode="tel" autoComplete="tel" /></div>
+                  </div>
+                  <div className="mt-4"><label className="mb-1.5 block text-sm font-semibold">{t('checkout.addr')}</label><textarea className={input} rows="3" value={form.address} onChange={set('address')} placeholder={t('checkout.addrPlaceholder')} /></div>
+                </>
+              )}
               {error && <div className="mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400" role="alert">{error}</div>}
               <button onClick={placeOrder} disabled={loading} className="mt-4 w-full rounded-xl bg-brand-600 py-3 font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-60 cursor-pointer">
                 {loading ? t('checkout.placing') : !user ? t('checkout.loginToOrder') : t('checkout.confirm')}

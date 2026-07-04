@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Icon } from '../../components/Icons'
 import { cx } from '../../lib/ui'
 import { useLang } from '../../i18n/LanguageContext'
+import { isSupabaseConfigured } from '../../lib/supabase'
 import { useAuth } from '../../auth/AuthContext'
 import { useAuthNav } from '../../auth/useAuthNav'
 import { accountApi } from '../../lib/accountApi'
@@ -46,12 +47,12 @@ export default function AccountLayout() {
 
   // กั้นสิทธิ์: ยังไม่ล็อกอิน -> เปิด modal แล้วกลับหน้าแรก
   useEffect(() => {
-    if (!apiEnabled) { nav('/', { replace: true }); return }
     if (!loading && !user) { openAuth('login'); nav('/', { replace: true }) }
   }, [loading, user, openAuth, nav])
 
   useEffect(() => {
     if (!user) return
+    if (!apiEnabled) return
     let alive = true
     accountApi.summary().then((r) => { if (alive) setSummary(r.summary) }).catch(() => {})
     return () => { alive = false }
@@ -84,9 +85,9 @@ export default function AccountLayout() {
       <div className="mt-6 grid gap-6 md:grid-cols-[240px_1fr]">
         <aside className="h-fit rounded-2xl border border-line bg-surface p-3">
           <div className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted">{t('account.sectionList')}</div>
-          <SideLink to="/orders" icon="receipt" label={t('account.myOrders')} />
+          <SideLink to="/account/orders" icon="receipt" label={t('account.myOrders')} />
           <SideLink to="/account/wishlist" icon="heart" label={t('account.wishlist')} />
-          <SideLink to="/track" icon="truck" label={t('account.trackShipping')} />
+          <SideLink to="/account/track" icon="truck" label={t('account.trackShipping')} />
           <div className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted">{t('account.sectionAccount')}</div>
           <SideLink to="/account" end icon="user" label={t('account.personalInfo')} />
           <SideLink to="/account/addresses" icon="pin" label={t('account.shippingAddress')} />

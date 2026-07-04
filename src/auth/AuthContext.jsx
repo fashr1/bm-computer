@@ -85,7 +85,7 @@ export function AuthProvider({ children }) {
   // ===== โหมด Supabase ตรง (fallback เมื่อยังไม่เปิดใช้ backend) =====
   useEffect(() => {
     if (apiEnabled) return
-    if (!isSupabaseConfigured) { setLoading(false); return }
+    if (!isSupabaseConfigured) { setLoading(false); setOauthPending(false); return }
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user || null)
       try { sessionStorage.removeItem(OAUTH_FLAG) } catch { /* ignore */ }
@@ -99,7 +99,7 @@ export function AuthProvider({ children }) {
   // โหลด profile (มี role) เมื่อ user เปลี่ยน - เฉพาะโหมด Supabase ตรง
   useEffect(() => {
     if (apiEnabled) return
-    if (!user) { setProfile(null); return }
+    if (!isSupabaseConfigured) return
     let alive = true
     supabase.from('profiles').select('id,full_name,phone,email,role').eq('id', user.id).maybeSingle()
       .then(({ data }) => { if (alive) setProfile(data) })
@@ -108,7 +108,7 @@ export function AuthProvider({ children }) {
 
   const signOut = async () => {
     if (apiEnabled) { try { await authApi.logout() } catch { /* ล้าง state ต่อแม้ revoke ไม่สำเร็จ */ } }
-    else { await supabase.auth.signOut() }
+    else if (isSupabaseConfigured) { await supabase.auth.signOut() }
     setUser(null)
     setProfile(null)
   }

@@ -88,8 +88,9 @@ export default function Navbar() {
                       <div className="truncate text-xs text-muted">{user.email}</div>
                     </div>
                   </div>
+                  <MenuItem to="/profile" icon="user" label={t('nav.profile')} onClick={() => setMenu(false)} />
                   {apiEnabled && <MenuItem to="/account" icon="user" label={t('nav.account')} onClick={() => setMenu(false)} />}
-                  <MenuItem to="/orders" icon="receipt" label={t('nav.myOrders')} onClick={() => setMenu(false)} />
+                  <MenuItem to="/account/orders" icon="receipt" label={t('nav.myOrders')} onClick={() => setMenu(false)} />
                   {apiEnabled && <MenuItem to="/account/wishlist" icon="heart" label={t('nav.wishlist')} onClick={() => setMenu(false)} />}
                   {isAdmin && <MenuItem to="/admin" icon="grid" label={t('nav.admin')} onClick={() => setMenu(false)} />}
                   <button onClick={() => { setMenu(false); signOut(); nav('/') }}
@@ -127,8 +128,8 @@ export default function Navbar() {
               <Icon name="chevronDown" size={15} className={cx('transition-transform', cats && 'rotate-180')} />
             </button>
             {cats && (
-              <div className="z-50 mt-1 w-full rounded-xl border border-line bg-surface p-2 text-fg shadow-xl md:absolute md:left-0 md:top-11 md:mt-0 md:w-[520px]">
-                <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+              <div className="z-50 mt-1 w-full rounded-xl border border-line bg-surface p-2 text-fg shadow-xl md:absolute md:left-0 md:top-11 md:mt-0 md:w-64">
+                <div className="flex flex-col gap-1">
                   {catsLoading
                     ? Array.from({ length: 9 }).map((_, i) => <span key={i} className="skeleton m-1 h-9 rounded-lg" aria-hidden="true" />)
                     : categories.map((c) => (

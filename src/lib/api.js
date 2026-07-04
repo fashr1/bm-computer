@@ -1,6 +1,16 @@
 import { supabase, isSupabaseConfigured } from './supabase'
 import { api, apiEnabled, ApiError } from './apiClient'
 import { tOutside } from '../i18n/translations'
+import { categories as _mCats, products as _mProds, brands as _mBrands } from '../data/mock'
+
+// ============================================================
+// Mock data — ใช้เมื่อไม่มี Supabase และไม่มี backend (local dev)
+// ============================================================
+const _CAT_TH = { cpu:'ซีพียู', gpu:'การ์ดจอ', mainboard:'เมนบอร์ด', ram:'แรม', storage:'SSD / HDD', monitor:'จอมอนิเตอร์', notebook:'โน้ตบุ๊ก', gear:'เกมมิ่งเกียร์', case:'เคส', psu:'พาวเวอร์ซัพพลาย', cooling:'ชุดระบายความร้อน' }
+const _CAT_EN = { cpu:'CPU', gpu:'GPU', mainboard:'Mainboard', ram:'RAM', storage:'SSD / HDD', monitor:'Monitor', notebook:'Notebook', gear:'Gaming Gear', case:'Case', psu:'Power Supply', cooling:'Cooling' }
+export const MOCK_CATEGORIES = _mCats.map((c, i) => ({ ...c, id: i + 1, name_th: _CAT_TH[c.slug] || c.slug, name_en: _CAT_EN[c.slug] || c.slug, sort: i }))
+export const MOCK_BRANDS = _mBrands.map((name, i) => ({ id: i + 1, name, slug: name.toLowerCase() }))
+export const MOCK_PRODUCTS = _mProds.map((p) => ({ ...p, slug: p.id, images: [], featured: p.badge === 'best', sale: !!(p.old && p.old > p.price), discount: p.old ? Math.round(((p.old - p.price) / p.old) * 100) : 0, sku: 'BM-' + p.id.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) }))
 
 // เมื่อเปิด backend API: เรียกผ่าน backend (session อยู่ใน HttpOnly cookie)
 // เมื่อไม่เปิด: fallback ต่อ Supabase ตรง (RLS ผ่าน session ของ supabase-js)
@@ -44,7 +54,7 @@ const qs = (obj) => {
 
 export async function fetchBrands() {
   if (apiEnabled) return (await api.get('/api/catalog/brands')).items
-  if (!isSupabaseConfigured) return []
+  if (!isSupabaseConfigured) return MOCK_BRANDS
   const { data, error } = await supabase.from('brands').select('*').order('sort', { ascending: true })
   if (error) throw error
   return data || []
@@ -52,7 +62,7 @@ export async function fetchBrands() {
 
 export async function fetchCategories() {
   if (apiEnabled) return (await api.get('/api/catalog/categories')).items
-  if (!isSupabaseConfigured) return []
+  if (!isSupabaseConfigured) return MOCK_CATEGORIES
   const { data, error } = await supabase.from('categories').select('*').order('sort', { ascending: true })
   if (error) throw error
   return data || []
@@ -61,7 +71,7 @@ export async function fetchCategories() {
 // ดัชนีค้นหาแบบเบา (autocomplete) - โหลดครั้งเดียว (ดู lib/searchIndex.js)
 export async function fetchSearchIndex() {
   if (apiEnabled) return (await api.get('/api/catalog/search-index')).items
-  if (!isSupabaseConfigured) return []
+  if (!isSupabaseConfigured) return MOCK_PRODUCTS.map((p) => ({ slug: p.slug, name: p.name, brand: p.brand || null, cat: p.cat || null, price: p.price, image: null }))
   const { data, error } = await supabase.from('products')
     .select('slug,name,price,sale_price,images,categories(slug),brands(name)').eq('is_active', true)
   if (error) throw error
@@ -257,7 +267,14 @@ export async function fetchProducts({ cat, brand, featured, limit } = {}) {
   if (apiEnabled) {
     return (await api.get('/api/catalog/products' + qs({ cat, brand, featured: featured ? 'true' : undefined, limit }))).items
   }
-  if (!isSupabaseConfigured) return []
+  if (!isSupabaseConfigured) {
+    let items = MOCK_PRODUCTS
+    if (cat) items = items.filter((p) => p.cat === cat)
+    if (brand) items = items.filter((p) => p.brand === brand)
+    if (featured) items = items.filter((p) => p.featured)
+    if (limit) items = items.slice(0, Number(limit))
+    return items
+  }
   let q = supabase.from('products').select(SELECT).eq('is_active', true)
   if (cat) q = q.eq('categories.slug', cat)
   if (brand) q = q.eq('brands.slug', brand)
@@ -274,7 +291,7 @@ export async function fetchProductBySlug(slug) {
     try { return (await api.get(`/api/catalog/products/${encodeURIComponent(slug)}`)).item }
     catch (e) { if (e instanceof ApiError && e.status === 404) return null; throw e }
   }
-  if (!isSupabaseConfigured) return null
+  if (!isSupabaseConfigured) return MOCK_PRODUCTS.find((p) => p.slug === slug) || null
   const { data, error } = await supabase.from('products').select(SELECT).eq('slug', slug).maybeSingle()
   if (error) throw error
   return data ? mapProduct(data) : null

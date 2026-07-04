@@ -39,7 +39,7 @@ function BrandChip({ b }) {
       {err || !src
         ? <span className="text-sm font-bold text-fg">{b.name}</span>
         : <img src={src} alt={b.name} loading="lazy"
-            className="max-h-9 max-w-[100px] object-contain grayscale dark:brightness-0 dark:invert"
+            className="max-h-9 max-w-[100px] object-contain"
             onError={() => setErr(true)} />}
     </Link>
   )

@@ -17,25 +17,25 @@ export const accountApi = {
   summary: () => api.get('/api/account/summary'),
 
   // ที่อยู่จัดส่ง
-  listAddresses: () => api.get('/api/account/addresses'),
-  createAddress: (b) => api.post('/api/account/addresses', b),
-  updateAddress: (id, b) => api.patch(`/api/account/addresses/${id}`, b),
-  deleteAddress: (id) => api.del(`/api/account/addresses/${id}`),
+  listAddresses:  ()        => api.get('/api/account/addresses'),
+  createAddress:  (b)       => api.post('/api/account/addresses', b),
+  updateAddress:  (id, b)   => api.patch(`/api/account/addresses/${id}`, b),
+  deleteAddress:  (id)      => api.del(`/api/account/addresses/${id}`),
 
   // ที่อยู่ใบกำกับภาษี
-  listTax: () => api.get('/api/account/tax-profiles'),
-  createTax: (b) => api.post('/api/account/tax-profiles', b),
-  updateTax: (id, b) => api.patch(`/api/account/tax-profiles/${id}`, b),
-  deleteTax: (id) => api.del(`/api/account/tax-profiles/${id}`),
+  listTax:        ()        => api.get('/api/account/tax-profiles'),
+  createTax:      (b)       => api.post('/api/account/tax-profiles', b),
+  updateTax:      (id, b)   => api.patch(`/api/account/tax-profiles/${id}`, b),
+  deleteTax:      (id)      => api.del(`/api/account/tax-profiles/${id}`),
 
   // ช่องทางชำระเงิน
-  listPayments: () => api.get('/api/account/payment-methods'),
-  createPayment: (b) => api.post('/api/account/payment-methods', b),
-  updatePayment: (id, b) => api.patch(`/api/account/payment-methods/${id}`, b),
-  deletePayment: (id) => api.del(`/api/account/payment-methods/${id}`),
+  listPayments:   ()        => api.get('/api/account/payment-methods'),
+  createPayment:  (b)       => api.post('/api/account/payment-methods', b),
+  updatePayment:  (id, b)   => api.patch(`/api/account/payment-methods/${id}`, b),
+  deletePayment:  (id)      => api.del(`/api/account/payment-methods/${id}`),
 
   // สินค้าที่ถูกใจ
-  listWishlist: () => api.get('/api/account/wishlist'),
-  addWishlist: (slug) => api.post('/api/account/wishlist', { slug }),
-  removeWishlist: (slug) => api.del(`/api/account/wishlist/${encodeURIComponent(slug)}`),
+  listWishlist:   ()        => api.get('/api/account/wishlist'),
+  addWishlist:    (slug)    => api.post('/api/account/wishlist', { slug }),
+  removeWishlist: (slug)    => api.del(`/api/account/wishlist/${encodeURIComponent(slug)}`),
 }

@@ -14,7 +14,9 @@ export default function Profile() {
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
 
-  const load = () => accountApi.getProfile().then((r) => setP(r.profile)).catch((e) => setErr(e.message))
+  const load = () => {
+    accountApi.getProfile().then((r) => setP(r.profile)).catch((e) => setErr(e.message))
+  }
   useEffect(() => { load() }, [])
 
   const startEdit = () => {

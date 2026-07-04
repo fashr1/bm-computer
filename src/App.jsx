@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation, Outlet } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom'
 import { useEffect } from 'react'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
@@ -27,6 +27,9 @@ import AdminCustomers from './pages/admin/AdminCustomers'
 import AdminSettings from './pages/admin/AdminSettings'
 import AccountLayout from './pages/account/AccountLayout'
 import Profile from './pages/account/Profile'
+import ProfilePage from './pages/ProfilePage'
+import AccountOrders from './pages/account/AccountOrders'
+import AccountTrack from './pages/account/AccountTrack'
 import Addresses from './pages/account/Addresses'
 import TaxProfiles from './pages/account/TaxProfiles'
 import PaymentMethods from './pages/account/PaymentMethods'
@@ -107,12 +110,15 @@ export default function App() {
           <Route path="/login" element={<AuthPage view="login" />} />
           <Route path="/register" element={<AuthPage view="register" />} />
           <Route path="/track" element={<OrderTracking />} />
-          <Route path="/orders" element={<OrderHistory />} />
+          <Route path="/orders" element={<Navigate to="/account/orders" replace />} />
           <Route path="/builder" element={<PCBuilder />} />
           <Route path="/community" element={<CommunityBuilds />} />
           <Route path="/community/:code" element={<CommunityBuilds />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/account" element={<AccountLayout />}>
             <Route index element={<Profile />} />
+            <Route path="orders" element={<AccountOrders />} />
+            <Route path="track" element={<AccountTrack />} />
             <Route path="addresses" element={<Addresses />} />
             <Route path="tax" element={<TaxProfiles />} />
             <Route path="payment" element={<PaymentMethods />} />

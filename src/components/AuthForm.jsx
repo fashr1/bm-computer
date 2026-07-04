@@ -48,13 +48,13 @@ export default function AuthForm({ view, setView, onClose, redirectTo }) {
     e.preventDefault()
     setError(''); setOk('')
     if (!canSubmit) return
-    if (!apiEnabled && !isSupabaseConfigured) {
-      setError(t('auth.notConfigured'))
-      return
-    }
     setLoading(true)
     try {
-      const captchaToken = turnstileEnabled ? captcha : undefined
+      if (!apiEnabled && !isSupabaseConfigured) {
+        setError(t('auth.notConfigured'))
+        return
+      }
+      const captchaToken = (turnstileEnabled && captcha) ? captcha : undefined
       if (apiEnabled) {
         // ผ่าน backend: ตั้ง HttpOnly cookie (session สั้น) แล้วโหลดผู้ใช้ใหม่
         if (isLogin) {
