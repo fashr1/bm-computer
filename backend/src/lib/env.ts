@@ -9,6 +9,8 @@ export type Bindings = {
   FRONTEND_ORIGIN: string
   ACCESS_TTL: string
   REFRESH_TTL: string
+  // หน้าต่าง idle ของ session เมื่อ "ไม่ติ๊กจดจำฉัน" (วินาที) - เลื่อนออกทุกครั้งที่ refresh
+  IDLE_TTL?: string
   COOKIE_SAMESITE: string
   COOKIE_SECURE: string
 }

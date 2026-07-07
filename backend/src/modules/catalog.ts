@@ -214,6 +214,45 @@ export function registerCatalog(app: OpenAPIHono<AppEnv>) {
     created_at: z.string(), mine: z.boolean(),
   }).openapi('Review')
 
+  // GET /api/catalog/reviews/latest - รีวิวล่าสุดทั้งร้าน (โชว์หน้าแรก) เฉพาะที่มีข้อความ
+  app.openapi(
+    createRoute({
+      method: 'get', path: '/api/catalog/reviews/latest', tags: TAG, summary: 'รีวิวล่าสุดทั้งร้าน (หน้าแรก)',
+      request: { query: z.object({ limit: z.coerce.number().int().min(1).max(20).optional() }) },
+      responses: {
+        200: jsonRes('สำเร็จ', z.object({
+          ok: z.literal(true),
+          items: z.array(z.object({
+            id: z.string(), rating: z.number(), comment: z.string(),
+            author_name: z.string().nullable(), verified: z.boolean(), created_at: z.string(),
+            product: z.object({ slug: z.string(), name: z.string(), image: z.string().nullable() }),
+          }).openapi('LatestReview')),
+        })),
+      },
+    }),
+    async (c) => {
+      const { limit } = c.req.valid('query')
+      const { data, error } = await anonClient(c.env)
+        .from('reviews')
+        .select('id,rating,comment,author_name,verified,created_at, products!inner(slug,name,images,is_active)')
+        .not('comment', 'is', null)
+        .neq('comment', '')
+        .eq('products.is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(limit ?? 8)
+      if (error) throw badRequest(error.message)
+      const items = (data ?? []).map((r: any) => ({
+        id: r.id, rating: r.rating, comment: r.comment,
+        author_name: r.author_name ?? null, verified: !!r.verified, created_at: r.created_at,
+        product: {
+          slug: r.products.slug, name: r.products.name,
+          image: Array.isArray(r.products.images) && r.products.images[0] ? r.products.images[0] : null,
+        },
+      }))
+      return c.json({ ok: true as const, items })
+    }
+  )
+
   // หา product id จาก slug (anon - เฉพาะสินค้าที่ active)
   async function productIdBySlug(env: AppEnv['Bindings'], slug: string): Promise<string> {
     const { data, error } = await anonClient(env).from('products').select('id').eq('slug', slug).eq('is_active', true).maybeSingle()

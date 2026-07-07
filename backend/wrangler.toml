@@ -17,9 +17,12 @@ SUPABASE_URL = "https://xclugpegrcuqmnapysnf.supabase.co"
 SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjbHVncGVncmN1cW1uYXB5c25mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDExNTYsImV4cCI6MjA5ODQxNzE1Nn0.cyIBPA0NaDsK9L2AujUTa59C-CGzlsMvCuHAkd8-sxo"
 # origin ของ frontend ที่อนุญาตให้เรียก API (คั่นด้วย , ได้หลายค่า)
 FRONTEND_ORIGIN = "http://localhost:5173,https://bm-computer.pages.dev"
-# อายุ token (วินาที) - access สั้นตามมาตรฐานสากล (OWASP: 15 นาที) / refresh 7 วัน
+# อายุ token (วินาที) - access สั้นตามมาตรฐานสากล (OWASP: 15 นาที)
+# REFRESH_TTL = หน้าต่าง session เมื่อติ๊ก "จดจำฉัน" (7 วัน) / IDLE_TTL = เมื่อไม่ติ๊ก (1 ชม.)
+# ทั้งคู่เป็นแบบเลื่อน (sliding): ใช้งานอยู่ = ต่ออายุทุกรอบ refresh · ทิ้งไว้เกินหน้าต่าง = หลุดเอง
 ACCESS_TTL = "900"
 REFRESH_TTL = "604800"
+IDLE_TTL = "3600"
 # คุกกี้: prod ข้ามโดเมน = SameSite=None + Secure ; dev (ผ่าน vite proxy) = Lax + ไม่ต้อง Secure
 COOKIE_SAMESITE = "None"
 COOKIE_SECURE = "true"
