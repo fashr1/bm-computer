@@ -69,7 +69,6 @@ export const translations = {
       heroTag: 'โปรเดือนนี้', heroTitle: 'จัดสเปคคอมในฝัน ครบ จบ ในที่เดียว',
       heroDesc: 'ซีพียู การ์ดจอ เมนบอร์ด โน้ตบุ๊ก และเกมมิ่งเกียร์ ของแท้ประกันศูนย์ พร้อมบริการจัดสเปคฟรี',
       shopNow: 'ช้อปเลย',
-      heroKicker: 'บ้านมีคอม',
       heroLeadStatic: 'ร้านคอมครบวงจร',
       heroSlogans: [
         'จัดสเปคคอมในฝัน ได้ในไม่กี่คลิก',
@@ -85,9 +84,6 @@ export const translations = {
       showcaseOrder: 'สรุปคำสั่งซื้อ', showcaseSlip: 'ตรวจสลิปอัตโนมัติ',
       statProducts: 'สินค้าพร้อมส่ง', statBrands: 'แบรนด์ชั้นนำ', statCats: 'หมวดหมู่สินค้า', statShip: 'จัดส่งด่วนทั่วไทย',
       reviewsTitle: 'รีวิวจากผู้ซื้อจริง', reviewsSub: 'เสียงจริงจากลูกค้าที่ซื้อและใช้งานแล้ว', verifiedBuyer: 'ซื้อแล้ว',
-      builderCtaTitle: 'อยากได้คอมสักเครื่อง แต่ไม่รู้จะเริ่มยังไง?',
-      builderCtaDesc: 'ให้ระบบจัดสเปคช่วยเลือกอุปกรณ์ที่เข้ากันได้ คำนวณกำลังไฟ และประเมินความแรงให้อัตโนมัติ ใช้ฟรี ไม่ต้องมีความรู้มาก่อน',
-      builderCtaBtn: 'เริ่มจัดสเปคเลย', builderCtaCommunity: 'ดูสเปคจากชุมชน',
       flashSale: 'แฟลชเซล', endsIn: 'หมดเวลาใน', topBrands: 'แบรนด์ชั้นนำ',
     },
     list: {
@@ -388,7 +384,6 @@ export const translations = {
       heroTag: 'This month', heroTitle: 'Build your dream PC - all in one place',
       heroDesc: 'CPUs, GPUs, mainboards, notebooks and gaming gear. Genuine with warranty, plus free build service.',
       shopNow: 'Shop now',
-      heroKicker: 'Baan Mee Com',
       heroLeadStatic: 'Your complete PC store',
       heroSlogans: [
         'Build your dream PC in a few clicks',
@@ -404,9 +399,6 @@ export const translations = {
       showcaseOrder: 'Order summary', showcaseSlip: 'Slip auto-verified',
       statProducts: 'products in stock', statBrands: 'leading brands', statCats: 'categories', statShip: 'fast nationwide delivery',
       reviewsTitle: 'Reviews from real buyers', reviewsSub: 'Honest words from customers who bought and use the products', verifiedBuyer: 'Purchased',
-      builderCtaTitle: 'Want a new PC but not sure where to start?',
-      builderCtaDesc: 'Let the PC Builder pick compatible parts, estimate power draw and performance for you. Free, no expertise needed.',
-      builderCtaBtn: 'Start building', builderCtaCommunity: 'Browse community builds',
       flashSale: 'FLASH SALE', endsIn: 'Ends in', topBrands: 'Top brands',
     },
     list: {

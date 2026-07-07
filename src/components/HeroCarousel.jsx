@@ -1,16 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Icon } from './Icons'
 import { cx } from '../lib/ui'
 import SlideBanner from './SlideBanner'
 
-// สไลด์เดี่ยว: มีรูป = โชว์รูป · ไม่มีรูป/รูปโหลดพัง = แบนเนอร์แบบโค้ด (SlideBanner) จาก title/link ใน DB
+// สไลด์เดี่ยว: มีรูป = โชว์รูป · ไม่มีรูป/รูปโหลดพัง = แบนเนอร์แบบโค้ด (SlideBanner)
+// แสดงภาพอย่างเดียว ไม่เป็นลิงก์ - คลิกบนแบนเนอร์ต้องไม่พาไปหน้าอื่น (ลูกศร/จุดใช้เปลี่ยนสไลด์)
 function Slide({ s }) {
   const [broken, setBroken] = useState(false)
-  const inner = s.image_url && !broken
+  return s.image_url && !broken
     ? <img src={s.image_url} alt={s.title || ''} className="h-full w-full object-cover" loading="eager" onError={() => setBroken(true)} />
-    : <SlideBanner s={s} />
-  return s.link ? <Link to={s.link} className="block h-full">{inner}</Link> : inner
+    : <SlideBanner />
 }
 
 // แบนเนอร์เลื่อนอัตโนมัติ (เคารพ prefers-reduced-motion) + ปุ่ม/จุด

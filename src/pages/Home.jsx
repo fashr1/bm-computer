@@ -56,7 +56,7 @@ export default function Home() {
 
   return (
     <div className={`${wrap} py-8`}>
-      {/* HERO: หัวใหญ่ซ้าย + โชว์เคสหน้าคำสั่งซื้อขวา (ประกอบจากข้อมูลจริง interact ได้จริง) */}
+      {/* HERO: หัวใหญ่ซ้าย + โชว์เคสหน้าคำสั่งซื้อขวา (ประกอบจากข้อมูลจริง - ภาพตกแต่ง hover ได้ คลิกไม่มีผล) */}
       <section className="grid items-center gap-10 py-4 lg:grid-cols-[1fr_1fr] lg:gap-14 lg:py-8">
         <div>
           <h1 className="text-3xl font-extrabold leading-[1.2] tracking-tight sm:text-4xl xl:text-5xl">
@@ -160,26 +160,6 @@ export default function Home() {
           </div>
         </section>
       )}
-
-      {/* PC BUILDER CTA */}
-      <section className="mt-12 overflow-hidden rounded-2xl bg-zinc-950 p-8 text-white sm:p-10">
-        <div className="flex flex-wrap items-center justify-between gap-6">
-          <div className="max-w-[52ch]">
-            <h2 className="flex items-center gap-2.5 text-xl font-bold sm:text-2xl">
-              <Icon name="cpu" size={26} className="text-brand-500" /> {t('home.builderCtaTitle')}
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">{t('home.builderCtaDesc')}</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link to="/builder" className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-700">
-              <Icon name="cpu" size={16} /> {t('home.builderCtaBtn')}
-            </Link>
-            <Link to="/community" className="inline-flex items-center gap-2 rounded-xl border border-white/25 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-white/10">
-              <Icon name="users" size={16} /> {t('home.builderCtaCommunity')}
-            </Link>
-          </div>
-        </div>
-      </section>
 
       {/* TRUST BAR */}
       <section className="mt-12 rounded-2xl border border-line bg-surface p-6">

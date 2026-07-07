@@ -120,15 +120,6 @@
   to   { opacity: 1; transform: scale(1); }
 }
 
-/* ลอยขึ้นลงเบาๆ ช้าๆ (เฉพาะชิ้นเล็กที่ลอยทับโชว์เคส - การ์ดหลักอยู่นิ่ง ไม่ให้หน้าดูสั่น)
-   ใส่ที่ wrapper ชั้นนอก ส่วน hover-lift อยู่ที่การ์ดชั้นใน จะได้ไม่ตีกันเรื่อง transform */
-@keyframes float-y {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
-}
-.anim-float-slow { animation: float-y 9s ease-in-out infinite; }
-.anim-float-slower { animation: float-y 11s ease-in-out 1.5s infinite; }
-
 /* เคอร์เซอร์กระพริบสำหรับ Typewriter (สโลแกนหน้าแรก) */
 @keyframes blink {
   0%, 50% { opacity: 1; }

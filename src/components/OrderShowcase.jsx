@@ -1,45 +1,28 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Icon } from './Icons'
 import { fmt } from '../data/mock'
 import { useLang } from '../i18n/LanguageContext'
-import { useCart } from '../cart/CartContext'
-import { useAuth } from '../auth/AuthContext'
-import { useAuthNav } from '../auth/useAuthNav'
 import { Skeleton } from './Skeleton'
 
-// การ์ดสินค้าจิ๋วลอยมุมซ้ายล่าง - ของจริงทั้งใบ: กดชื่อไปหน้าสินค้า กดปุ่มหยิบใส่ตะกร้าได้เลย
+// การ์ดสินค้าจิ๋วลอยมุมซ้ายล่าง - ตกแต่งอย่างเดียว (hover ได้ คลิกไม่มีผล)
 function MiniProductCard({ p }) {
-  const { t } = useLang()
-  const { add } = useCart()
-  const { user } = useAuth()
-  const { open: openAuth } = useAuthNav()
-  const [added, setAdded] = useState(false)
-  const addToCart = () => {
-    if (!user) { openAuth('login'); return }
-    add(p, 1); setAdded(true); setTimeout(() => setAdded(false), 1200)
-  }
   return (
     <div className="flex w-[248px] items-center gap-3 rounded-2xl border border-line bg-surface p-3 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-      <Link to={`/product/${p.id}`} className="shrink-0">
-        {p.images?.[0]
-          ? <img src={p.images[0]} alt="" loading="lazy" className="h-12 w-12 rounded-lg bg-white object-contain p-1" />
-          : <span className="grid h-12 w-12 place-items-center rounded-lg bg-surface2 text-muted"><Icon name="image" size={20} /></span>}
-      </Link>
+      {p.images?.[0]
+        ? <img src={p.images[0]} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-lg bg-white object-contain p-1" />
+        : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-surface2 text-muted"><Icon name="image" size={20} /></span>}
       <div className="min-w-0 flex-1">
-        <Link to={`/product/${p.id}`} className="line-clamp-1 text-xs font-semibold transition-colors hover:text-brand-600">{p.name}</Link>
+        <span className="line-clamp-1 text-xs font-semibold">{p.name}</span>
         <div className="nums mt-0.5 text-sm font-extrabold text-brand-600">฿{fmt(p.price)}</div>
       </div>
-      <button onClick={addToCart} disabled={p.stock === 0} aria-label={t('common.addToCart')} title={t('common.addToCart')}
-        className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg text-white transition-colors cursor-pointer disabled:opacity-50 ${added ? 'bg-emerald-600' : 'bg-brand-600 hover:bg-brand-700'}`}>
-        <Icon name={added ? 'check' : 'cart'} size={16} />
-      </button>
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-600 text-white" aria-hidden="true">
+        <Icon name="cart" size={16} />
+      </span>
     </div>
   )
 }
 
 // โชว์เคส "หน้าจอคำสั่งซื้อ" บน hero - ประกอบจากข้อมูลสินค้าจริงใน DB (ไม่ mock)
-// interact ได้จริง: แถวสินค้ากดไปหน้าสินค้า · การ์ดลอยคือ ProductCard ตัวจริง (หยิบใส่ตะกร้า/ถูกใจได้เลย)
+// เป็นภาพประกอบตกแต่งล้วน: ทุกชิ้นอยู่นิ่ง มีแค่ hover effect - คลิกแล้วไม่เปลี่ยนอะไร
 export default function OrderShowcase({ products = [], loading }) {
   const { t } = useLang()
   if (loading || !products.length) return <Skeleton className="aspect-[7/6] w-full rounded-2xl" />
@@ -70,7 +53,7 @@ export default function OrderShowcase({ products = [], loading }) {
             </span>
           </div>
 
-          {/* สถานะ 3 ขั้น: เสร็จ 2 ขั้น กำลังจัดส่ง (จุดเต้น) */}
+          {/* สถานะ 3 ขั้น: เสร็จ 2 ขั้น กำลังจัดส่ง (ไอคอนนิ่ง ไม่ใส่อนิเมชัน) */}
           <div className="mt-5 flex items-center gap-2">
             {steps.map((s, i) => (
               <div key={s.label} className={i < steps.length - 1 ? 'flex flex-1 items-center gap-2' : 'flex items-center gap-2'}>
@@ -78,10 +61,7 @@ export default function OrderShowcase({ products = [], loading }) {
                   {s.state === 'done' ? (
                     <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-500 text-white"><Icon name="check" size={12} /></span>
                   ) : (
-                    <span className="relative grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-600 text-white">
-                      <span className="absolute inset-0 animate-ping rounded-full bg-brand-600/60" aria-hidden="true" />
-                      <Icon name="truck" size={12} className="relative" />
-                    </span>
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-600 text-white"><Icon name="truck" size={12} /></span>
                   )}
                   <span className="whitespace-nowrap text-xs font-semibold">{s.label}</span>
                 </div>
@@ -90,10 +70,10 @@ export default function OrderShowcase({ products = [], loading }) {
             ))}
           </div>
 
-          {/* รายการสินค้าจริง - กดไปหน้าสินค้าได้ */}
+          {/* รายการสินค้าจริงจาก DB - โชว์อย่างเดียว hover ได้ คลิกไม่มีผล */}
           <div className="mt-5 flex flex-col gap-2">
             {rows.map((p) => (
-              <Link key={p.id} to={`/product/${p.id}`}
+              <div key={p.id}
                 className="flex items-center gap-3 rounded-xl border border-line p-2.5 transition-colors hover:border-brand-500 hover:bg-surface2/50">
                 {p.images?.[0]
                   ? <img src={p.images[0]} alt="" loading="lazy" className="h-11 w-11 shrink-0 rounded-lg bg-white object-contain p-1"
@@ -104,7 +84,7 @@ export default function OrderShowcase({ products = [], loading }) {
                   <span className="text-xs text-muted">{p.brand}</span>
                 </span>
                 <span className="nums shrink-0 text-sm font-bold">฿{fmt(p.price)}</span>
-              </Link>
+              </div>
             ))}
           </div>
 
@@ -119,16 +99,16 @@ export default function OrderShowcase({ products = [], loading }) {
         </div>
       </div>
 
-      {/* toast ชำระเงินสำเร็จ - ลอยมุมขวาบน */}
-      <div className="anim-float-slow absolute -top-4 right-0 z-10">
+      {/* toast ชำระเงินสำเร็จ - มุมขวาบน (อยู่นิ่ง ขยับเฉพาะตอน hover) */}
+      <div className="absolute -top-4 right-0 z-10">
         <div className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3.5 py-2.5 shadow-lg transition-transform duration-300 hover:scale-105">
           <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald-500 text-white"><Icon name="check" size={14} /></span>
           <span className="text-sm font-bold">{t('checkout.paySuccess')}</span>
         </div>
       </div>
 
-      {/* การ์ดสินค้าจริง - ลอยทับมุมซ้ายล่างพอดีๆ ไม่บังเนื้อหาการ์ดหลัก */}
-      <div className="anim-float-slower absolute -bottom-1 -left-2 z-10 hidden sm:block lg:-left-5">
+      {/* การ์ดสินค้าจริง - ทับมุมซ้ายล่างพอดีๆ ไม่บังเนื้อหาการ์ดหลัก (อยู่นิ่ง) */}
+      <div className="absolute -bottom-1 -left-2 z-10 hidden sm:block lg:-left-5">
         <MiniProductCard p={card} />
       </div>
     </div>
