@@ -4,6 +4,7 @@ import { adminListSlides, saveSlide, deleteSlide } from '../../lib/api'
 import { useFetch } from '../../lib/useFetch'
 import { useLang } from '../../i18n/LanguageContext'
 import { SlideCardSkeleton } from '../../components/Skeleton'
+import SlideBanner from '../../components/SlideBanner'
 import { check } from '../../lib/validate'
 
 const input = 'w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20'
@@ -39,7 +40,9 @@ export default function AdminSlides() {
           {rows.map((s) => (
             <div key={s.id} className="overflow-hidden rounded-xl border border-line bg-surface">
               <div className="aspect-[1200/440] bg-surface2">
-                {s.image_url && <img src={s.image_url} alt="" className="h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />}
+                {s.image_url
+                  ? <img src={s.image_url} alt="" className="h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                  : <SlideBanner s={s} />}
               </div>
               <div className="flex items-center justify-between gap-2 p-3">
                 <div className="min-w-0">
@@ -73,7 +76,8 @@ function SlideForm({ slide, onClose, onSaved }) {
 
   const submit = async (e) => {
     e.preventDefault(); setErr('')
-    if (!f.image_url) { setErr(t('admin.imageUrlRequired')); return }
+    // รูปไม่บังคับ: เว้นว่าง = หน้าเว็บใช้แบนเนอร์ดีไซน์จากชื่อสไลด์ (SlideBanner) แต่ต้องมีชื่อ
+    if (!f.image_url && !f.title.trim()) { setErr(t('admin.slideTitleRequired')); return }
     const urlErr = check('url', f.image_url)
     if (urlErr) { setErr(t(urlErr)); return }
     setSaving(true)
@@ -88,10 +92,19 @@ function SlideForm({ slide, onClose, onSaved }) {
           <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg hover:bg-surface2 cursor-pointer"><Icon name="x" /></button>
         </div>
         {err && <div className="mb-3 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600">{err}</div>}
-        {f.image_url && <img src={f.image_url} alt="" className="mb-3 aspect-[1200/440] w-full rounded-lg bg-surface2 object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />}
+        {/* พรีวิวสด: มีรูปโชว์รูป ไม่มีรูปโชว์แบนเนอร์ดีไซน์ (ตรงกับที่ลูกค้าจะเห็นจริง) */}
+        <div className="mb-3 aspect-[1200/440] w-full overflow-hidden rounded-lg bg-surface2">
+          {f.image_url
+            ? <img src={f.image_url} alt="" className="h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+            : <SlideBanner s={f} />}
+        </div>
         <div className="flex flex-col gap-3">
           <div><label className="mb-1.5 block text-sm font-semibold">{t('admin.placement')}</label><select className={input} value={f.placement} onChange={set('placement')}>{PLACEMENTS.map((p) => <option key={p.v} value={p.v}>{t(p.l)}</option>)}</select></div>
-          <div><label className="mb-1.5 block text-sm font-semibold">{t('admin.slideImageUrl')}</label><input className={input} value={f.image_url} onChange={set('image_url')} placeholder="https://..." /></div>
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold">{t('admin.slideImageUrl')}</label>
+            <input className={input} value={f.image_url} onChange={set('image_url')} placeholder="https://..." />
+            <span className="mt-1 block text-xs text-muted">{t('admin.slideImageHint')}</span>
+          </div>
           <div><label className="mb-1.5 block text-sm font-semibold">{t('admin.slideTitle')}</label><input className={input} value={f.title} onChange={set('title')} /></div>
           <div><label className="mb-1.5 block text-sm font-semibold">{t('admin.slideLink')}</label><input className={input} value={f.link} onChange={set('link')} placeholder="/products?cat=gpu" /></div>
           <div className="flex gap-4">

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import ProductRow from '../components/ProductRow'
 import { Icon } from '../components/Icons'
 import HeroCarousel from '../components/HeroCarousel'
+import OrderShowcase from '../components/OrderShowcase'
 import Typewriter from '../components/Typewriter'
 import BrandBar from '../components/BrandBar'
 import FlashSale from '../components/FlashSale'
@@ -45,7 +46,6 @@ export default function Home() {
   const featured = list.filter((p) => p.featured)
   const newArrivals = [...list].reverse().slice(0, 12)
   const flash = list.filter((p) => p.sale)
-  const topBrands = (brands || []).slice(0, 5)
 
   const stats = [
     [list.length ? `${list.length}+` : '150+', t('home.statProducts')],
@@ -56,20 +56,17 @@ export default function Home() {
 
   return (
     <div className={`${wrap} py-8`}>
-      {/* HERO: หัวใหญ่บนพื้นเรียบ (ไม่มีกล่อง gradient) + carousel ขวา - แนว landing มืออาชีพ */}
-      <section className="grid items-center gap-8 py-4 lg:grid-cols-[1fr_1.15fr] lg:gap-12 lg:py-8">
+      {/* HERO: หัวใหญ่ซ้าย + โชว์เคสหน้าคำสั่งซื้อขวา (ประกอบจากข้อมูลจริง interact ได้จริง) */}
+      <section className="grid items-center gap-10 py-4 lg:grid-cols-[1fr_1fr] lg:gap-14 lg:py-8">
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-bold tracking-wide text-brand-700 dark:bg-brand-600/15 dark:text-brand-400">
-            <Icon name="bolt" size={13} /> {t('home.heroKicker')}
-          </span>
-          <h1 className="mt-4 text-3xl font-extrabold leading-[1.2] tracking-tight sm:text-4xl xl:text-5xl">
+          <h1 className="text-3xl font-extrabold leading-[1.2] tracking-tight sm:text-4xl xl:text-5xl">
             <span className="block">{t('home.heroLeadStatic')}</span>
             {/* ล็อกความสูงตายตัว: ข้อความพิมพ์/ลบยาวแค่ไหนก็ไม่ดันหน้าเว็บ */}
-            <span className="block h-[2.5em] overflow-hidden text-brand-600 sm:h-[2.5em] xl:h-[2.5em]">
+            <span className="block h-[2.5em] overflow-hidden text-brand-600">
               <Typewriter phrases={t('home.heroSlogans')} />
             </span>
           </h1>
-          <p className="max-w-[46ch] text-base leading-relaxed text-muted">{t('home.heroDesc')}</p>
+          <p className="mt-2 max-w-[46ch] text-base leading-relaxed text-muted">{t('home.heroDesc')}</p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/products" className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-brand-600/25 transition-colors hover:bg-brand-700">
               <Icon name="cart" size={17} /> {t('home.shopNow')}
@@ -78,21 +75,12 @@ export default function Home() {
               <Icon name="cpu" size={17} /> {t('home.heroBuild')}
             </Link>
           </div>
-          {/* แบรนด์ที่ไว้วางใจ (chips) */}
-          <div className="mt-8 border-t border-line pt-5">
-            <div className="flex items-center gap-1.5 text-sm font-semibold text-muted">
-              <Icon name="heart" size={14} className="text-brand-600" /> {t('home.trustBy')}
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {(topBrands.length ? topBrands : Array.from({ length: 5 })).map((b, i) => b ? (
-                <Link key={b.id} to={`/products?brand=${b.slug}`}
-                  className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm font-semibold transition-colors hover:border-brand-500 hover:text-brand-600">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" /> {b.name}
-                </Link>
-              ) : <Skeleton key={i} className="h-8 w-20 rounded-full" />)}
-            </div>
-          </div>
         </div>
+        <OrderShowcase products={list} loading={loading} />
+      </section>
+
+      {/* แบนเนอร์โฆษณา/โปรโมชัน (ย้ายลงมาจาก header) - เนื้อหาคุมจากหลังบ้าน */}
+      <section className="mt-10">
         <HeroCarousel slides={heroSlides || []} />
       </section>
 

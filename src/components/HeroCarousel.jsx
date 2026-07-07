@@ -2,6 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from './Icons'
 import { cx } from '../lib/ui'
+import SlideBanner from './SlideBanner'
+
+// สไลด์เดี่ยว: มีรูป = โชว์รูป · ไม่มีรูป/รูปโหลดพัง = แบนเนอร์แบบโค้ด (SlideBanner) จาก title/link ใน DB
+function Slide({ s }) {
+  const [broken, setBroken] = useState(false)
+  const inner = s.image_url && !broken
+    ? <img src={s.image_url} alt={s.title || ''} className="h-full w-full object-cover" loading="eager" onError={() => setBroken(true)} />
+    : <SlideBanner s={s} />
+  return s.link ? <Link to={s.link} className="block h-full">{inner}</Link> : inner
+}
 
 // แบนเนอร์เลื่อนอัตโนมัติ (เคารพ prefers-reduced-motion) + ปุ่ม/จุด
 export default function HeroCarousel({ slides }) {
@@ -20,12 +30,6 @@ export default function HeroCarousel({ slides }) {
   const pause = () => clearInterval(timer.current)
 
   if (!n) return <div className="skeleton aspect-[1200/440] rounded-2xl" aria-hidden="true" />
-
-  const Slide = ({ s }) => {
-    const img = <img src={s.image_url} alt={s.title || ''} className="h-full w-full object-cover" loading="eager"
-      onError={(e) => { e.currentTarget.src = 'https://placehold.co/1200x440/dc2626/ffffff?text=BM+Computer' }} />
-    return s.link ? <Link to={s.link} className="block h-full">{img}</Link> : img
-  }
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-line bg-surface2" onMouseEnter={pause}

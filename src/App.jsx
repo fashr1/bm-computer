@@ -35,6 +35,7 @@ import TaxProfiles from './pages/account/TaxProfiles'
 import PaymentMethods from './pages/account/PaymentMethods'
 import Wishlist from './pages/account/Wishlist'
 import DocsPage from './pages/docs/DocsPage'
+import ErrorBoundary from './components/ErrorBoundary'
 import NotFound from './pages/NotFound'
 
 function ScrollTop() {
@@ -86,7 +87,7 @@ function StorefrontShell() {
 
 export default function App() {
   return (
-    <>
+    <ErrorBoundary>
       <GoogleSignInOverlay />
       <ScrollTop />
       <Routes>
@@ -130,6 +131,6 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
-    </>
+    </ErrorBoundary>
   )
 }

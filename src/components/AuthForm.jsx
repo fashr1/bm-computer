@@ -236,7 +236,7 @@ export default function AuthForm({ view, setView, onClose, redirectTo }) {
         {isLogin && (
           <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-            {t('auth.remember')} <span className="text-xs text-muted">({t('auth.rememberHint')})</span>
+            {t('auth.remember')}
           </label>
         )}
 
