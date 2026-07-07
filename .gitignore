@@ -29,3 +29,5 @@ Thumbs.db
 #claude
 .claude
 CLAUDE.md
+# Playwright MCP test artifacts
+.playwright-mcp/
